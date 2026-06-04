@@ -21,7 +21,7 @@ client = AsyncOpenAI(
     base_url=os.getenv("LLM_BASE_URL", "https://api.groq.com/openai/v1"),
 )
 
-MODEL = os.getenv("LLM_MODEL", "llama3-groq-70b-8192-tool-use-preview")
+MODEL = os.getenv("LLM_MODEL", "llama-3.3-70b-versatile")
 
 TOOLS = [
     {
@@ -183,6 +183,7 @@ async def run_agent(session_id: str, history: list[dict], user_message: str) -> 
                 ],
                 tools=TOOLS,
                 tool_choice="auto",
+                parallel_tool_calls=False,  # prevents malformed multi-tool JSON on Groq
                 max_tokens=2048,
             )
         except Exception as e:
@@ -196,6 +197,7 @@ async def run_agent(session_id: str, history: list[dict], user_message: str) -> 
                             *messages,
                             {"role": "user", "content": "(Responde en texto plano, sin usar herramientas)"},
                         ],
+                        parallel_tool_calls=False,
                         max_tokens=2048,
                     )
                     text = fallback.choices[0].message.content or ""
