@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GEMA-MED — USMLE Tutor</title>
+  <script src="https://cdn.jsdelivr.net/npm/marked@9/marked.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --sidebar-bg:   #0D2137;
+      --sidebar-text: #B8CDD9;
+      --accent:       #2563EB;
+      --accent-hover: #1D4ED8;
+      --success:      #16A34A;
+      --error:        #DC2626;
+      --chat-bg:      #F0F4F8;
+      --user-bg:      #2563EB;
+      --agent-bg:     #FFFFFF;
+      --border:       #DDE3EC;
+      --text:         #111827;
+      --muted:        #6B7280;
+      --radius:       12px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--chat-bg);
+      display: flex;
+      height: 100vh;
+      overflow: hidden;
+      color: var(--text);
+    }
+
+    /* ── SIDEBAR ── */
+    #sidebar {
+      width: 230px;
+      min-width: 230px;
+      background: var(--sidebar-bg);
+      display: flex;
+      flex-direction: column;
+      padding: 20px 14px;
+      gap: 6px;
+      overflow-y: auto;
+    }
+    .logo {
+      font-size: 18px;
+      font-weight: 700;
+      color: #FFFFFF;
+      padding: 8px 6px 16px;
+      border-bottom: 1px solid #1E3A5A;
+      margin-bottom: 8px;
+      letter-spacing: -0.3px;
+    }
+    .logo span { color: #60A5FA; }
+    .section-label {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 1.2px;
+      text-transform: uppercase;
+      color: #4B6A87;
+      margin: 12px 0 6px 4px;
+    }
+    .topic-btn {
+      background: transparent;
+      border: none;
+      color: var(--sidebar-text);
+      padding: 8px 10px;
+      border-radius: 8px;
+      cursor: pointer;
+      text-align: left;
+      font-size: 13px;
+      font-family: inherit;
+      transition: background 0.15s, color 0.15s;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .topic-btn:hover, .topic-btn.active {
+      background: #1E3A5A;
+      color: #FFFFFF;
+    }
+    .topic-btn.active { color: #60A5FA; font-weight: 600; }
+    .step-group {
+      display: flex;
+      gap: 4px;
+      padding: 2px 4px;
+    }
+    .step-btn {
+      flex: 1;
+      background: #1A3352;
+      border: 1px solid #2A4A6A;
+      color: var(--sidebar-text);
+      padding: 6px 4px;
+      border-radius: 7px;
+      cursor: pointer;
+      font-size: 12px;
+      font-family: inherit;
+      text-align: center;
+      transition: all 0.15s;
+    }
+    .step-btn:hover, .step-btn.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #FFFFFF;
+      font-weight: 600;
+    }
+
+    /* ── PROGRESS PANEL ── */
+    #progress-panel {
+      background: #0A1B2E;
+      border-radius: 10px;
+      padding: 12px;
+      margin-top: 4px;
+    }
+    .progress-stat {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      color: var(--sidebar-text);
+      padding: 3px 0;
+    }
+    .progress-stat strong { color: #FFFFFF; }
+    .progress-bar-wrap {
+      background: #1A3352;
+      border-radius: 4px;
+      height: 6px;
+      margin: 6px 0 10px;
+      overflow: hidden;
+    }
+    .progress-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #2563EB, #60A5FA);
+      border-radius: 4px;
+      transition: width 0.5s ease;
+    }
+    .progress-topic {
+      font-size: 11px;
+      color: #6B8FAD;
+      padding: 2px 0;
+      display: flex;
+      justify-content: space-between;
+    }
+    .progress-topic .acc {
+      color: #60A5FA;
+      font-weight: 600;
+    }
+    #reset-btn {
+      margin-top: auto;
+      padding-top: 16px;
+      background: transparent;
+      border: 1px solid #2A4A6A;
+      color: #6B8FAD;
+      border-radius: 8px;
+      padding: 9px;
+      cursor: pointer;
+      font-size: 12px;
+      font-family: inherit;
+      transition: all 0.15s;
+      width: 100%;
+      margin-top: 16px;
+    }
+    #reset-btn:hover { border-color: var(--error); color: #FCA5A5; }
+
+    /* ── MAIN CHAT ── */
+    #main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    #chat-header {
+      background: #FFFFFF;
+      border-bottom: 1px solid var(--border);
+      padding: 14px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+    #chat-header h2 {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text);
+    }
+    #session-badge {
+      font-size: 11px;
+      color: var(--muted);
+      font-family: monospace;
+      background: #F3F4F6;
+      padding: 3px 8px;
+      border-radius: 6px;
+    }
+    #messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .bubble-row {
+      display: flex;
+      align-items: flex-end;
+      gap: 8px;
+    }
+    .bubble-row.user { flex-direction: row-reverse; }
+    .avatar {
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .avatar.agent { background: #DBEAFE; }
+    .avatar.user  { background: var(--accent); color: #FFF; }
+    .bubble {
+      max-width: 72%;
+      padding: 12px 16px;
+      border-radius: var(--radius);
+      font-size: 14px;
+      line-height: 1.6;
+      word-break: break-word;
+    }
+    .bubble.agent {
+      background: var(--agent-bg);
+      color: var(--text);
+      border-bottom-left-radius: 4px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    }
+    .bubble.user {
+      background: var(--user-bg);
+      color: #FFFFFF;
+      border-bottom-right-radius: 4px;
+    }
+    /* Markdown inside agent bubble */
+    .bubble.agent h1, .bubble.agent h2, .bubble.agent h3 {
+      font-size: 15px; font-weight: 700; margin: 12px 0 6px; color: #1E3A5F;
+    }
+    .bubble.agent p    { margin: 6px 0; }
+    .bubble.agent ul, .bubble.agent ol { padding-left: 18px; margin: 6px 0; }
+    .bubble.agent li   { margin: 3px 0; }
+    .bubble.agent hr   { border: none; border-top: 1px solid var(--border); margin: 10px 0; }
+    .bubble.agent code {
+      background: #F1F5F9; padding: 1px 5px; border-radius: 4px;
+      font-size: 12.5px; font-family: 'Courier New', monospace; color: #1E3A5F;
+    }
+    .bubble.agent pre  {
+      background: #F1F5F9; border-radius: 8px; padding: 10px 12px;
+      margin: 8px 0; overflow-x: auto; font-size: 12.5px;
+    }
+    .bubble.agent pre code { background: none; padding: 0; }
+    .bubble.agent strong { color: #1E3A5F; }
+    .bubble.agent table { border-collapse: collapse; width: 100%; margin: 8px 0; font-size: 13px; }
+    .bubble.agent th { background: #EFF6FF; padding: 6px 10px; text-align: left; border: 1px solid var(--border); }
+    .bubble.agent td { padding: 5px 10px; border: 1px solid var(--border); }
+
+    /* Typing indicator */
+    .typing-dots { display: flex; gap: 5px; padding: 4px 2px; }
+    .typing-dots span {
+      width: 8px; height: 8px; background: #CBD5E1; border-radius: 50%;
+      animation: blink 1.2s infinite;
+    }
+    .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+    .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes blink {
+      0%, 80%, 100% { transform: scale(0.8); opacity: 0.5; }
+      40%           { transform: scale(1);   opacity: 1;   }
+    }
+
+    /* ── INPUT BAR ── */
+    #input-bar {
+      background: #FFFFFF;
+      border-top: 1px solid var(--border);
+      padding: 14px 20px;
+      display: flex;
+      gap: 10px;
+      align-items: flex-end;
+      flex-shrink: 0;
+    }
+    #input {
+      flex: 1;
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-size: 14px;
+      font-family: inherit;
+      resize: none;
+      outline: none;
+      max-height: 120px;
+      transition: border-color 0.15s;
+      line-height: 1.5;
+    }
+    #input:focus { border-color: var(--accent); }
+    #send-btn {
+      background: var(--accent);
+      color: #FFF;
+      border: none;
+      border-radius: 10px;
+      padding: 10px 18px;
+      font-size: 14px;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      transition: background 0.15s;
+      white-space: nowrap;
+    }
+    #send-btn:hover    { background: var(--accent-hover); }
+    #send-btn:disabled { background: #93C5FD; cursor: not-allowed; }
+    #filter-bar {
+      padding: 8px 20px 0;
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      background: #FFFFFF;
+    }
+    .filter-chip {
+      background: #EFF6FF;
+      color: var(--accent);
+      border: none;
+      border-radius: 20px;
+      padding: 4px 12px;
+      font-size: 12px;
+      font-family: inherit;
+      cursor: pointer;
+      transition: all 0.15s;
+      font-weight: 500;
+    }
+    .filter-chip:hover { background: #DBEAFE; }
+    .filter-chip.active { background: var(--accent); color: #FFF; }
+    #filter-label { font-size: 12px; color: var(--muted); display: flex; align-items: center; margin-right: 2px; }
+
+    /* Welcome message */
+    #welcome {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--muted);
+    }
+    #welcome h2 { font-size: 22px; color: #1E3A5F; margin-bottom: 8px; }
+    #welcome p  { font-size: 14px; margin: 6px 0; }
+    .quick-btn {
+      display: inline-block;
+      background: #EFF6FF;
+      color: var(--accent);
+      border: 1px solid #BFDBFE;
+      border-radius: 8px;
+      padding: 8px 14px;
+      margin: 5px;
+      cursor: pointer;
+      font-size: 13px;
+      transition: all 0.15s;
+    }
+    .quick-btn:hover { background: var(--accent); color: #FFF; border-color: var(--accent); }
+
+    /* Mobile */
+    @media (max-width: 640px) {
+      #sidebar { display: none; }
+      .bubble { max-width: 90%; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<aside id="sidebar">
+  <div class="logo">🩺 <span>GEMA</span>-MED</div>
+
+  <div class="section-label">Tema</div>
+  <div id="topic-list"></div>
+
+  <div class="section-label">Step</div>
+  <div class="step-group" id="step-group"></div>
+
+  <div class="section-label">Progreso</div>
+  <div id="progress-panel"><p style="font-size:12px;color:#4B6A87">Aún no hay datos.</p></div>
+
+  <button id="reset-btn">↺ Nueva sesión</button>
+</aside>
+
+<!-- MAIN -->
+<main id="main">
+  <div id="chat-header">
+    <h2>Tutor USMLE — ECFMG / Reválida</h2>
+    <span id="session-badge">sin sesión</span>
+  </div>
+
+  <div id="filter-bar">
+    <span id="filter-label">Filtro activo:</span>
+    <span id="active-filter" style="font-size:12px;color:#6B7280;padding:4px 0">Ninguno — preguntas mixtas</span>
+    <button class="filter-chip" id="clear-filter" style="display:none">✕ Limpiar</button>
+  </div>
+
+  <div id="messages">
+    <div id="welcome">
+      <h2>🩺 Bienvenido a GEMA-MED</h2>
+      <p>Tutor de IA para USMLE Step 1 / 2 CK / 3 y reválida de título médico.</p>
+      <p style="margin-top:16px;font-weight:600;color:#374151">Empieza con:</p>
+      <div style="margin-top:10px">
+        <span class="quick-btn" onclick="quickSend('Dame una pregunta de cardiology del Step 1')">🫀 Cardio Step 1</span>
+        <span class="quick-btn" onclick="quickSend('Dame una pregunta de neurology del Step 2')">🧠 Neuro Step 2</span>
+        <span class="quick-btn" onclick="quickSend('Dame una pregunta de pharmacology del Step 1')">💊 Farmaco Step 1</span>
+        <span class="quick-btn" onclick="quickSend('Dame una pregunta de microbiology')">🔬 Micro aleatorio</span>
+        <span class="quick-btn" onclick="quickSend('Explícame el proceso de ECFMG para graduados cubanos')">🇨🇺 ¿Cómo aplico a la Reválida?</span>
+        <span class="quick-btn" onclick="quickSend('¿Cuál es mi progreso?')">📊 Ver progreso</span>
+      </div>
+    </div>
+  </div>
+
+  <div id="input-bar">
+    <textarea id="input" rows="1" placeholder="Escribe tu respuesta (A/B/C/D/E) o haz una pregunta..."></textarea>
+    <button id="send-btn">Enviar ↵</button>
+  </div>
+</main>
+
+<script>
+  // ── CONFIG ──────────────────────────────────────────────────────────────
+  const API = window.location.origin;
+
+  const TOPICS = [
+    { emoji: '🫀', label: 'Cardiology',      code: 'cardiology'       },
+    { emoji: '🫁', label: 'Pulmonology',     code: 'pulmonology'      },
+    { emoji: '🧠', label: 'Neurology',       code: 'neurology'        },
+    { emoji: '🩸', label: 'Hematology',      code: 'hematology'       },
+    { emoji: '💊', label: 'Pharmacology',    code: 'pharmacology'     },
+    { emoji: '🔬', label: 'Microbiology',    code: 'microbiology'     },
+    { emoji: '🏥', label: 'Gastroenterology',code: 'gastroenterology' },
+    { emoji: '⚕️',  label: 'Nephrology',      code: 'nephrology'       },
+    { emoji: '🧬', label: 'Endocrinology',   code: 'endocrinology'    },
+    { emoji: '🔭', label: 'Pathology',       code: 'pathology'        },
+    { emoji: '🤰', label: 'OB/GYN',          code: 'ob_gyn'           },
+    { emoji: '👶', label: 'Pediatrics',      code: 'pediatrics'       },
+    { emoji: '🧘', label: 'Psychiatry',      code: 'psychiatry'       },
+    { emoji: '📊', label: 'Biostatistics',   code: 'biostatistics'    },
+  ];
+
+  const STEPS = ['Step 1', 'Step 2', 'Step 3'];
+
+  // ── STATE ────────────────────────────────────────────────────────────────
+  let sessionId   = localStorage.getItem('gema_session') || null;
+  let activeTopic = null;
+  let activeStep  = null;
+  let isLoading   = false;
+
+  // ── INIT ─────────────────────────────────────────────────────────────────
+  document.addEventListener('DOMContentLoaded', () => {
+    renderTopics();
+    renderSteps();
+    if (sessionId) {
+      document.getElementById('session-badge').textContent = sessionId.slice(0, 8) + '…';
+      loadProgress();
+    }
+    document.getElementById('send-btn').addEventListener('click', sendFromInput);
+    document.getElementById('input').addEventListener('keydown', e => {
+      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendFromInput(); }
+    });
+    document.getElementById('input').addEventListener('input', autoResize);
+    document.getElementById('reset-btn').addEventListener('click', resetSession);
+    document.getElementById('clear-filter').addEventListener('click', clearFilter);
+  });
+
+  function renderTopics() {
+    const list = document.getElementById('topic-list');
+    TOPICS.forEach(t => {
+      const btn = document.createElement('button');
+      btn.className = 'topic-btn';
+      btn.dataset.code = t.code;
+      btn.textContent = `${t.emoji} ${t.label}`;
+      btn.addEventListener('click', () => toggleTopic(t.code, btn));
+      list.appendChild(btn);
+    });
+  }
+
+  function renderSteps() {
+    const grp = document.getElementById('step-group');
+    STEPS.forEach((s, i) => {
+      const btn = document.createElement('button');
+      btn.className = 'step-btn';
+      btn.dataset.step = i + 1;
+      btn.textContent = s;
+      btn.addEventListener('click', () => toggleStep(i + 1, btn));
+      grp.appendChild(btn);
+    });
+  }
+
+  // ── FILTERS ──────────────────────────────────────────────────────────────
+  function toggleTopic(code, btn) {
+    if (activeTopic === code) { activeTopic = null; btn.classList.remove('active'); }
+    else {
+      document.querySelectorAll('.topic-btn').forEach(b => b.classList.remove('active'));
+      activeTopic = code;
+      btn.classList.add('active');
+    }
+    updateFilterBar();
+  }
+
+  function toggleStep(step, btn) {
+    if (activeStep === step) { activeStep = null; btn.classList.remove('active'); }
+    else {
+      document.querySelectorAll('.step-btn').forEach(b => b.classList.remove('active'));
+      activeStep = step;
+      btn.classList.add('active');
+    }
+    updateFilterBar();
+  }
+
+  function clearFilter() {
+    activeTopic = null; activeStep = null;
+    document.querySelectorAll('.topic-btn, .step-btn').forEach(b => b.classList.remove('active'));
+    updateFilterBar();
+  }
+
+  function updateFilterBar() {
+    const label = document.getElementById('active-filter');
+    const clearBtn = document.getElementById('clear-filter');
+    const parts = [];
+    if (activeTopic) parts.push(activeTopic);
+    if (activeStep)  parts.push(`Step ${activeStep}`);
+    if (parts.length) {
+      label.textContent = parts.join(' + ');
+      label.style.color = '#2563EB';
+      clearBtn.style.display = 'inline-block';
+    } else {
+      label.textContent = 'Ninguno — preguntas mixtas';
+      label.style.color = '#6B7280';
+      clearBtn.style.display = 'none';
+    }
+  }
+
+  // ── SEND ─────────────────────────────────────────────────────────────────
+  function sendFromInput() {
+    const input = document.getElementById('input');
+    const text  = input.value.trim();
+    if (!text || isLoading) return;
+    input.value = '';
+    input.style.height = 'auto';
+    sendMessage(text);
+  }
+
+  function quickSend(text) {
+    document.getElementById('welcome').remove();
+    sendMessage(text);
+  }
+
+  function buildMessage(userText) {
+    // If user types a single letter (answer), send as-is
+    if (/^[abcdeABCDE]$/.test(userText.trim())) return userText;
+    // If no filter, send text verbatim
+    if (!activeTopic && !activeStep) return userText;
+    // If text is just "dame una pregunta" style, append filters
+    const lower = userText.toLowerCase();
+    const isQuestion = ['dame', 'pregunta', 'otra', 'question', 'next', 'siguiente'].some(w => lower.includes(w));
+    if (isQuestion) {
+      let msg = 'Dame una pregunta';
+      if (activeTopic) msg += ` de ${activeTopic}`;
+      if (activeStep)  msg += ` del Step ${activeStep}`;
+      return msg;
+    }
+    return userText;
+  }
+
+  async function sendMessage(text) {
+    const welcome = document.getElementById('welcome');
+    if (welcome) welcome.remove();
+
+    const msgToSend = buildMessage(text);
+    addBubble(text, 'user');   // show original text in UI
+    isLoading = true;
+    document.getElementById('send-btn').disabled = true;
+
+    const typingId = addTyping();
+
+    try {
+      const body = { message: msgToSend };
+      if (sessionId) body.session_id = sessionId;
+
+      const res  = await fetch(`${API}/chat`, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify(body),
+      });
+
+      if (!res.ok) throw new Error(`Server error ${res.status}`);
+      const data = await res.json();
+
+      sessionId = data.session_id;
+      localStorage.setItem('gema_session', sessionId);
+      document.getElementById('session-badge').textContent = sessionId.slice(0, 8) + '…';
+
+      removeTyping(typingId);
+      addBubble(data.response, 'agent');
+      loadProgress();
+
+    } catch (err) {
+      removeTyping(typingId);
+      addBubble(`❌ Error: ${err.message}. ¿Está corriendo el servidor en ${API}?`, 'agent');
+    } finally {
+      isLoading = false;
+      document.getElementById('send-btn').disabled = false;
+    }
+  }
+
+  // ── BUBBLES ───────────────────────────────────────────────────────────────
+  function addBubble(text, role) {
+    const messages = document.getElementById('messages');
+    const row = document.createElement('div');
+    row.className = `bubble-row ${role}`;
+
+    const avatar = document.createElement('div');
+    avatar.className = `avatar ${role}`;
+    avatar.textContent = role === 'agent' ? '🩺' : '👤';
+
+    const bubble = document.createElement('div');
+    bubble.className = `bubble ${role}`;
+    if (role === 'agent') {
+      bubble.innerHTML = marked.parse(text);
+    } else {
+      bubble.textContent = text;
+    }
+
+    row.appendChild(avatar);
+    row.appendChild(bubble);
+    messages.appendChild(row);
+    messages.scrollTop = messages.scrollHeight;
+  }
+
+  function addTyping() {
+    const messages = document.getElementById('messages');
+    const id = 'typing-' + Date.now();
+    const row = document.createElement('div');
+    row.className = 'bubble-row agent';
+    row.id = id;
+    row.innerHTML = `
+      <div class="avatar agent">🩺</div>
+      <div class="bubble agent"><div class="typing-dots"><span></span><span></span><span></span></div></div>`;
+    messages.appendChild(row);
+    messages.scrollTop = messages.scrollHeight;
+    return id;
+  }
+
+  function removeTyping(id) {
+    const el = document.getElementById(id);
+    if (el) el.remove();
+  }
+
+  // ── PROGRESS ─────────────────────────────────────────────────────────────
+  async function loadProgress() {
+    if (!sessionId) return;
+    try {
+      const res  = await fetch(`${API}/progress/${sessionId}`);
+      const data = await res.json();
+      renderProgress(data);
+    } catch (_) {}
+  }
+
+  function renderProgress(data) {
+    const panel = document.getElementById('progress-panel');
+    if (!data.total_answered) {
+      panel.innerHTML = '<p style="font-size:12px;color:#4B6A87">Sin datos aún.</p>';
+      return;
+    }
+    const pct = data.overall_accuracy;
+    const color = pct >= 70 ? '#22C55E' : pct >= 50 ? '#F59E0B' : '#EF4444';
+
+    let topicsHtml = '';
+    (data.by_topic || []).slice(0, 5).forEach(t => {
+      topicsHtml += `<div class="progress-topic"><span>${t.topic}</span><span class="acc">${t.accuracy}%</span></div>`;
+    });
+
+    panel.innerHTML = `
+      <div class="progress-stat">
+        <span>Preguntas</span>
+        <strong>${data.total_correct}/${data.total_answered}</strong>
+      </div>
+      <div class="progress-stat">
+        <span>Precisión</span>
+        <strong style="color:${color}">${pct}%</strong>
+      </div>
+      <div class="progress-bar-wrap">
+        <div class="progress-bar-fill" style="width:${pct}%"></div>
+      </div>
+      ${topicsHtml}
+    `;
+  }
+
+  // ── UTILS ─────────────────────────────────────────────────────────────────
+  function autoResize() {
+    const el = document.getElementById('input');
+    el.style.height = 'auto';
+    el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+  }
+
+  async function resetSession() {
+    if (!confirm('¿Reiniciar sesión? Se perderá el historial de chat (el progreso en DB se mantiene).')) return;
+    if (sessionId) {
+      await fetch(`${API}/session/${sessionId}`, { method: 'DELETE' }).catch(() => {});
+    }
+    localStorage.removeItem('gema_session');
+    sessionId = null;
+    document.getElementById('messages').innerHTML = '';
+    document.getElementById('session-badge').textContent = 'sin sesión';
+    document.getElementById('progress-panel').innerHTML = '<p style="font-size:12px;color:#4B6A87">Sin datos aún.</p>';
+    clearFilter();
+  }
+</script>
+</body>
+</html>

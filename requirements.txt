@@ -1,0 +1,22 @@
+# ── Core ──────────────────────────────────────────────────────────────────────
+fastapi>=0.115.0
+uvicorn[standard]>=0.32.0
+python-dotenv>=1.0.0
+
+# ── LLM — OpenAI SDK (compatible con Groq, OpenAI, y otros) ──────────────────
+openai>=1.50.0
+httpx>=0.27.0
+
+# ── MedQA dataset (HuggingFace — descarga una vez ~100 MB) ───────────────────
+datasets>=3.0.0
+
+# ── Database — SQLite (dev) + PostgreSQL (prod, opcional) ────────────────────
+sqlalchemy>=2.0.0
+psycopg2-binary>=2.9.9   # solo se usa si DATABASE_URL apunta a PostgreSQL
+
+# ── Auth — Clerk JWT (solo en prod con CLERK_DOMAIN configurado) ─────────────
+PyJWT>=2.8.0
+cryptography>=42.0.0
+
+# ── Telegram Bot (opcional — solo si TELEGRAM_TOKEN está en .env) ────────────
+python-telegram-bot>=20.7

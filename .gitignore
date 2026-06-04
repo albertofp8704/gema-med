@@ -1,0 +1,25 @@
+# Secrets
+.env
+.env.local
+*.env
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# Database
+*.db
+*.sqlite
+
+# HuggingFace cache
+.cache/
+
+# Node
+frontend/node_modules/
+frontend/.next/
+
+# Railway
+.railway/
