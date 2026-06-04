@@ -109,7 +109,7 @@ async def run_agent(session_id: str, history: list[dict], user_message: str) -> 
         response = await client.chat.completions.create(
             model=MODEL,
             messages=[
-                {"role": "system", "content": SYSTEM_PROMPT.format(session_id=session_id)},
+                {"role": "system", "content": SYSTEM_PROMPT.replace("{session_id}", session_id)},
                 *messages,
             ],
             tools=TOOLS,
