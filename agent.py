@@ -1,16 +1,20 @@
 """
-GEMA-MED — Agent con OpenAI SDK (compatible con Groq).
+GEMA-MED — Agent optimizado para velocidad.
 
-LLM gratuito: Groq + llama-3.3-70b-versatile (14,400 req/día free tier)
-Obtén tu key GRATIS en: https://console.groq.com (sin tarjeta)
+Estrategia:
+  - Preguntas USMLE: fetch en Python → 1 sola llamada a Groq (no tool calls)
+  - Respuestas/explicaciones: 1 llamada con contexto de la pregunta
+  - General chat: 1 llamada sin tools
+  → Reduce de 2-3 roundtrips Groq a 1 por request
 """
 
 import os
+import re
 import json
 from openai import AsyncOpenAI
 
 from prompts import SYSTEM_PROMPT
-from tools import get_usmle_question, search_pubmed
+from tools import get_usmle_question, search_pubmed, TOPIC_KEYWORDS
 from db import (
     save_result, get_progress, get_weakness_report,
     set_study_plan, get_study_plan, update_study_phase,
@@ -21,74 +25,108 @@ client = AsyncOpenAI(
     base_url=os.getenv("LLM_BASE_URL", "https://api.groq.com/openai/v1"),
 )
 
-MODEL = os.getenv("LLM_MODEL", "llama-3.1-8b-instant")
+MODEL      = os.getenv("LLM_MODEL", "llama-3.1-8b-instant")
+MAX_TOKENS = int(os.getenv("MAX_TOKENS", "1000"))
+
+# ── Detección rápida de intención ─────────────────────────────────────────────
+
+_QUESTION_WORDS = {"pregunta","question","dame","give","quiz","otra","next","siguiente",
+                   "siguiente","another","diagnóstico","simulacro","practice"}
+_ANSWER_LETTERS = {"a","b","c","d"}
+_TOPIC_RE = re.compile(
+    r"\b(" + "|".join(TOPIC_KEYWORDS.keys()) + r")\b", re.I
+)
+_STEP_RE = re.compile(r"\bstep\s*([123])\b", re.I)
+
+
+def _detect_intent(text: str) -> str:
+    """Returns: 'question' | 'answer' | 'plan' | 'progress' | 'general'"""
+    low = text.strip().lower()
+    # Single letter → answer to active question
+    if len(low) <= 2 and low.strip() in _ANSWER_LETTERS:
+        return "answer"
+    # Plan-related
+    if any(w in low for w in ("mi plan","fecha","examen","objetivo","schedule","semana")):
+        return "plan"
+    # Progress-related
+    if any(w in low for w in ("progreso","progress","debilidad","weakness","estadística","stats")):
+        return "progress"
+    # Question request
+    if any(w in low for w in _QUESTION_WORDS):
+        return "question"
+    return "general"
+
+
+# ── Fast path: 1 llamada Groq sin tool calls ──────────────────────────────────
+
+async def _fast_question(session_id: str, history: list, topic: str | None, step: str | None) -> str:
+    """Fetch pregunta en Python + 1 Groq call para formatearla. Evita 1 roundtrip."""
+    q = get_usmle_question(topic=topic, step=step)
+
+    opts_text = "\n".join(f"{k}) {v}" for k, v in q["options"].items())
+    q_block = (
+        f"PREGUNTA DISPONIBLE (ID: {q['id']} | Tema: {q['topic']} | Source: {q['source']}):\n"
+        f"{q['question']}\n\nOpciones:\n{opts_text}\n"
+        f"Respuesta correcta: {q['correct_letter']}) {q['correct_answer']}\n"
+        f"Explicación base: {q.get('explanation','')[:300]}"
+    )
+
+    system = (
+        SYSTEM_PROMPT.replace("{session_id}", session_id)
+        + f"\n\n---\n{q_block}\n---\n"
+        + "INSTRUCCIÓN: Presenta la pregunta anterior usando el formato UWorld exacto. "
+        + "NO reveles la respuesta correcta. Termina con '*(Escribe tu respuesta: A, B, C o D)*'"
+    )
+
+    resp = await client.chat.completions.create(
+        model=MODEL,
+        messages=[
+            {"role": "system", "content": system},
+            *history[:-1],  # sin el último mensaje del usuario
+            {"role": "user",   "content": "Presenta la siguiente pregunta USMLE."},
+        ],
+        max_tokens=700,
+        temperature=0.2,
+    )
+    return resp.choices[0].message.content or ""
+
+
+async def _fast_explanation(session_id: str, history: list, letter: str) -> str:
+    """1 Groq call con contexto completo de la conversación para generar explicación."""
+    resp = await client.chat.completions.create(
+        model=MODEL,
+        messages=[
+            {"role": "system", "content": SYSTEM_PROMPT.replace("{session_id}", session_id)},
+            *history,
+        ],
+        max_tokens=MAX_TOKENS,
+        temperature=0.2,
+    )
+    return resp.choices[0].message.content or ""
+
+
+async def _fast_general(session_id: str, history: list) -> str:
+    """Chat general sin tool calls — 1 roundtrip."""
+    resp = await client.chat.completions.create(
+        model=MODEL,
+        messages=[
+            {"role": "system", "content": SYSTEM_PROMPT.replace("{session_id}", session_id)},
+            *history,
+        ],
+        max_tokens=MAX_TOKENS,
+        temperature=0.3,
+    )
+    return resp.choices[0].message.content or ""
+
+
+# ── Tool use (plan, progress, search) ─────────────────────────────────────────
 
 TOOLS = [
     {
         "type": "function",
         "function": {
-            "name": "get_usmle_question",
-            "description": (
-                "Obtiene una pregunta USMLE real del banco MedQA (10,000+ preguntas). "
-                "Úsalo SIEMPRE que el usuario pida una pregunta, quiz, práctica, diagnóstico o simulacro."
-            ),
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "topic": {
-                        "type": "string",
-                        "description": (
-                            "Tema médico a filtrar. Dejar vacío para preguntas aleatorias. "
-                            "Valores válidos: cardiology, pulmonology, nephrology, neurology, "
-                            "gastroenterology, endocrinology, hematology, pharmacology, "
-                            "microbiology, pathology, ob_gyn, pediatrics, psychiatry, "
-                            "biostatistics, anatomy, physiology, biochemistry"
-                        ),
-                    },
-                    "step": {
-                        "type": "string",
-                        "description": "Nivel USMLE. Dejar vacío para cualquier step. Valores válidos: step1, step2, step3",
-                    },
-                },
-            },
-        },
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "search_pubmed",
-            "description": "Busca referencias clínicas en PubMed para respaldar explicaciones.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "query": {"type": "string", "description": "Consulta médica"},
-                },
-                "required": ["query"],
-            },
-        },
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "save_result",
-            "description": "Guarda el resultado de una respuesta para tracking de progreso.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "question_id": {"type": "string"},
-                    "topic":       {"type": "string"},
-                    "step":        {"type": "integer"},
-                    "correct":     {"type": "boolean"},
-                },
-                "required": ["question_id", "topic", "step", "correct"],
-            },
-        },
-    },
-    {
-        "type": "function",
-        "function": {
             "name": "get_progress",
-            "description": "Obtiene estadísticas de rendimiento del usuario: total de preguntas, precisión por tema, progreso del día.",
+            "description": "Obtiene estadísticas de rendimiento del usuario.",
             "parameters": {"type": "object", "properties": {}},
         },
     },
@@ -96,41 +134,22 @@ TOOLS = [
         "type": "function",
         "function": {
             "name": "get_weakness_report",
-            "description": "Identifica los sistemas con accuracy < 60% (debilidades) para priorizar revisión.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "threshold": {
-                        "type": "number",
-                        "description": "Umbral de accuracy para considerar debilidad (default: 60)",
-                    },
-                },
-            },
+            "description": "Identifica temas con accuracy < 60%.",
+            "parameters": {"type": "object", "properties": {}},
         },
     },
     {
         "type": "function",
         "function": {
             "name": "set_study_plan",
-            "description": (
-                "Guarda el plan de estudio del usuario. "
-                "Úsalo cuando el usuario diga su fecha objetivo de examen."
-            ),
+            "description": "Guarda el plan de estudio cuando el usuario indica su fecha de examen.",
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "target_date": {
-                        "type": "string",
-                        "description": "Fecha objetivo en formato YYYY-MM-DD",
-                    },
-                    "daily_goal": {
-                        "type": "integer",
-                        "description": "Preguntas por día (default: 40)",
-                    },
-                    "current_system": {
-                        "type": "string",
-                        "description": "Sistema de inicio (default: cardiology)",
-                    },
+                    "target_date":     {"type": "string", "description": "Fecha YYYY-MM-DD"},
+                    "plan_type":       {"type": "string", "description": "12_week o 6_week"},
+                    "daily_questions": {"type": "integer"},
+                    "current_week":    {"type": "integer"},
                 },
                 "required": ["target_date"],
             },
@@ -140,41 +159,33 @@ TOOLS = [
         "type": "function",
         "function": {
             "name": "get_study_plan",
-            "description": "Recupera el plan de estudio guardado: fecha objetivo, sistema actual, semanas restantes, cronograma.",
+            "description": "Recupera el plan de estudio guardado.",
             "parameters": {"type": "object", "properties": {}},
         },
     },
     {
         "type": "function",
         "function": {
-            "name": "update_study_phase",
-            "description": "Actualiza el sistema o fase actual del plan de estudio.",
+            "name": "search_pubmed",
+            "description": "Busca referencias en PubMed para respaldar explicaciones.",
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "current_system": {"type": "string"},
-                    "current_phase": {
-                        "type": "string",
-                        "enum": ["planning", "diagnostic", "systems", "review", "simulation", "final"],
-                    },
+                    "query": {"type": "string"},
                 },
+                "required": ["query"],
             },
         },
     },
 ]
 
 
-async def run_agent(session_id: str, history: list[dict], user_message: str) -> str:
-    history.append({"role": "user", "content": user_message})
+async def _tool_call_path(session_id: str, history: list) -> str:
+    """Tool use para plan/progress/search — hasta 4 iteraciones."""
     messages = list(history)
-
-    max_iterations = 8   # safety limit against infinite loops
-    iterations = 0
-
-    while iterations < max_iterations:
-        iterations += 1
+    for _ in range(4):
         try:
-            response = await client.chat.completions.create(
+            resp = await client.chat.completions.create(
                 model=MODEL,
                 messages=[
                     {"role": "system", "content": SYSTEM_PROMPT.replace("{session_id}", session_id)},
@@ -182,114 +193,88 @@ async def run_agent(session_id: str, history: list[dict], user_message: str) -> 
                 ],
                 tools=TOOLS,
                 tool_choice="auto",
-                parallel_tool_calls=False,  # prevents malformed multi-tool JSON on Groq
-                max_tokens=2048,
+                parallel_tool_calls=False,
+                max_tokens=MAX_TOKENS,
             )
         except Exception as e:
-            print(f"[AGENT ERROR] {type(e).__name__}: {e}")
-            # Groq tool-call format errors: retry without tools
-            err_str = str(e)
-            if "tool" in err_str.lower() or "400" in err_str:
-                try:
-                    fallback = await client.chat.completions.create(
-                        model=MODEL,
-                        messages=[
-                            {"role": "system", "content": SYSTEM_PROMPT.replace("{session_id}", session_id)},
-                            *messages,
-                            {"role": "user", "content": "(Responde en texto plano, sin usar herramientas)"},
-                        ],
-                        parallel_tool_calls=False,
-                        max_tokens=2048,
-                    )
-                    text = fallback.choices[0].message.content or ""
-                    history.append({"role": "assistant", "content": text})
-                    return text
-                except Exception as fe:
-                    print(f"[FALLBACK ERROR] {type(fe).__name__}: {fe}")
-            history.append({"role": "assistant", "content": f"Error: {err_str[:200]}"})
-            return f"Error del agente: {err_str[:200]}"
+            print(f"[TOOL ERROR] {e}")
+            return await _fast_general(session_id, history)
 
-        choice = response.choices[0]
+        choice = resp.choices[0]
         msg    = choice.message
 
         if choice.finish_reason == "tool_calls" and msg.tool_calls:
             messages.append({
-                "role":       "assistant",
-                "content":    msg.content,
+                "role": "assistant", "content": msg.content,
                 "tool_calls": [tc.model_dump() for tc in msg.tool_calls],
             })
-
             for tc in msg.tool_calls:
                 try:
                     args   = json.loads(tc.function.arguments)
-                    result = await _dispatch(tc.function.name, args, session_id)
+                    result = await _dispatch_tool(tc.function.name, args, session_id)
                 except Exception as e:
                     result = {"error": str(e)}
                 messages.append({
-                    "role":         "tool",
-                    "tool_call_id": tc.id,
-                    "content":      json.dumps(result, ensure_ascii=False),
+                    "role": "tool", "tool_call_id": tc.id,
+                    "content": json.dumps(result, ensure_ascii=False),
                 })
         else:
-            text = msg.content or ""
-            history.append({"role": "assistant", "content": text})
-            return text
+            return msg.content or ""
 
-    return "Error: demasiadas iteraciones. Intenta de nuevo."
+    return "No pude completar la solicitud. Intenta de nuevo."
 
 
-async def _dispatch(name: str, inputs: dict, session_id: str) -> dict:
-    if name == "get_usmle_question":
-        # Validate + sanitize — reject invalid values silently (8b model passes garbage)
-        VALID_TOPICS = {
-            "cardiology","pulmonology","nephrology","neurology","gastroenterology",
-            "endocrinology","hematology","pharmacology","microbiology","pathology",
-            "ob_gyn","pediatrics","psychiatry","biostatistics","anatomy","physiology","biochemistry",
-        }
-        VALID_STEPS = {"step1","step2","step3"}
-        raw_topic = (inputs.get("topic") or "").strip().lower()
-        raw_step  = (inputs.get("step")  or "").strip().lower()
-        return get_usmle_question(
-            topic=raw_topic if raw_topic in VALID_TOPICS else None,
-            step =raw_step  if raw_step  in VALID_STEPS  else None,
-        )
-
-    if name == "search_pubmed":
-        return {"results": await search_pubmed(inputs["query"])}
-
-    if name == "save_result":
-        save_result(
-            user_id=session_id,
-            question_id=inputs["question_id"],
-            topic=inputs.get("topic", "general"),
-            step=inputs.get("step", 1),
-            correct=inputs["correct"],
-        )
-        return {"saved": True}
-
+async def _dispatch_tool(name: str, inputs: dict, session_id: str) -> dict:
     if name == "get_progress":
         return get_progress(session_id)
-
     if name == "get_weakness_report":
-        return get_weakness_report(session_id, threshold=inputs.get("threshold", 60.0))
-
+        return get_weakness_report(session_id)
     if name == "set_study_plan":
         return set_study_plan(
             user_id=session_id,
             target_date=inputs["target_date"],
-            daily_goal=inputs.get("daily_goal", 40),
-            current_system=inputs.get("current_system", "cardiology"),
-            current_phase="diagnostic",
+            plan_type=inputs.get("plan_type", "12_week"),
+            daily_questions=inputs.get("daily_questions", 60),
+            current_week=inputs.get("current_week", 1),
         )
-
     if name == "get_study_plan":
         return get_study_plan(session_id)
-
-    if name == "update_study_phase":
-        return update_study_phase(
-            user_id=session_id,
-            current_system=inputs.get("current_system"),
-            current_phase=inputs.get("current_phase"),
-        )
-
+    if name == "search_pubmed":
+        return {"results": await search_pubmed(inputs["query"])}
     return {"error": f"Unknown tool: {name}"}
+
+
+# ── Entry point ───────────────────────────────────────────────────────────────
+
+async def run_agent(session_id: str, history: list[dict], user_message: str) -> str:
+    history.append({"role": "user", "content": user_message})
+
+    intent = _detect_intent(user_message)
+
+    try:
+        if intent == "question":
+            # Fast path: 1 API call (no tool calls)
+            topic_m = _TOPIC_RE.search(user_message)
+            step_m  = _STEP_RE.search(user_message)
+            topic   = topic_m.group(0).lower() if topic_m else None
+            step    = f"step{step_m.group(1)}" if step_m else None
+            text = await _fast_question(session_id, history, topic, step)
+
+        elif intent == "answer":
+            # Fast path: 1 API call con historial (el modelo ve la pregunta anterior)
+            text = await _fast_explanation(session_id, history, user_message.strip().upper())
+
+        elif intent in ("plan", "progress"):
+            # Tool use para operaciones de DB
+            text = await _tool_call_path(session_id, history)
+
+        else:
+            # Chat general — 1 call sin tools
+            text = await _fast_general(session_id, history)
+
+    except Exception as e:
+        print(f"[AGENT ERROR] {type(e).__name__}: {e}")
+        text = f"Error: {str(e)[:200]}"
+
+    history.append({"role": "assistant", "content": text})
+    return text
