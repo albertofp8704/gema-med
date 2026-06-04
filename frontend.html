@@ -813,8 +813,10 @@ function renderQuestionCard(parsed,raw){
   questionRawData[id]=raw;  // store safely outside onclick attribute
   const card=document.createElement('div');
   card.className='q-card';card.id=id;
-  const topicMatch=raw.match(/USMLE Step \d[^—\n]*—\s*([^\n*]+)/i);
-  const topicLabel=topicMatch?topicMatch[1].trim():'USMLE';
+  // Use active topic if user selected one (most reliable), else parse from Groq output
+  const topicMatch=raw.match(/USMLE Step \d[^—\-\n]*[—\-]+\s*([^\n*]+)/i);
+  const parsedLabel=topicMatch?topicMatch[1].trim():'USMLE';
+  const topicLabel=activeTopic?activeTopic.charAt(0).toUpperCase()+activeTopic.slice(1):parsedLabel;
 
   card.innerHTML=`
     <div class="q-card-header">
