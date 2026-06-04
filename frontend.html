@@ -228,6 +228,85 @@ body{font-family:'Inter',sans-serif;background:var(--page);color:var(--text);hei
 #send-btn:disabled{background:#93C5FD;cursor:not-allowed;}
 
 ::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:#CBD5E1;border-radius:3px}
+
+/* ── HEADER TOOLS ── */
+.hdr-tools{display:flex;align-items:center;gap:2px;padding:0 10px;border-left:1px solid rgba(255,255,255,.1);}
+.hdr-tool-btn{position:relative;background:none;border:none;color:rgba(255,255,255,.5);cursor:pointer;height:30px;min-width:30px;padding:0 5px;border-radius:7px;display:inline-flex;align-items:center;justify-content:center;gap:3px;font-size:15px;transition:all .15s;font-family:inherit;white-space:nowrap;}
+.hdr-tool-btn:hover{background:rgba(255,255,255,.1);color:#fff;}
+.hdr-tool-btn.on{color:#60A5FA;background:rgba(27,94,190,.3);}
+.hdr-badge{position:absolute;top:2px;right:2px;background:#EF4444;color:#fff;font-size:8px;font-weight:700;border-radius:8px;min-width:13px;height:13px;display:inline-flex;align-items:center;justify-content:center;padding:0 2px;}
+.hdr-badge.hidden{display:none;}
+.hdr-streak{color:#FB923C;font-size:12px;font-weight:700;padding:0 6px;display:flex;align-items:center;gap:3px;white-space:nowrap;}
+.hdr-timer{font-family:monospace;font-size:11px;color:rgba(255,255,255,.7);transition:color .3s;}
+.hdr-timer.urgent{color:#FCA5A5;animation:blink .7s step-end infinite;}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.4}}
+.hdr-vsep{width:1px;height:18px;background:rgba(255,255,255,.12);margin:0 3px;flex-shrink:0;}
+.hdr-ext{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);color:rgba(255,255,255,.65);border-radius:5px;padding:3px 8px;font-size:10px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .15s;letter-spacing:.3px;text-decoration:none;}
+.hdr-ext:hover{background:rgba(255,255,255,.18);color:#fff;border-color:rgba(255,255,255,.3);}
+
+/* ── DRAWERS ── */
+.drawer-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.25);z-index:350;display:none;}
+.drawer-backdrop.show{display:block;}
+.drawer{position:fixed;top:0;right:-440px;width:420px;height:100vh;background:#fff;border-left:1px solid var(--border);box-shadow:-4px 0 28px rgba(0,0,0,.14);display:flex;flex-direction:column;transition:right .28s cubic-bezier(.4,0,.2,1);z-index:360;}
+.drawer.open{right:0;}
+.drawer-hdr{background:var(--header);padding:14px 18px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+.drawer-title{font-size:15px;font-weight:700;color:#fff;}
+.drawer-close{background:none;border:none;color:rgba(255,255,255,.55);font-size:24px;cursor:pointer;line-height:1;padding:0;}
+.drawer-close:hover{color:#fff;}
+.drawer-tabs{display:flex;background:#F3F4F6;border-radius:8px;padding:3px;margin:12px 14px 4px;flex-shrink:0;}
+.dtab{flex:1;padding:6px;border:none;background:transparent;border-radius:5px;font-size:11px;font-weight:500;cursor:pointer;color:var(--muted);font-family:inherit;transition:all .15s;}
+.dtab.active{background:#fff;color:var(--blue);font-weight:600;box-shadow:0 1px 3px rgba(0,0,0,.08);}
+.drawer-body{flex:1;overflow-y:auto;padding:8px 14px 20px;}
+.drawer-empty{text-align:center;padding:44px 20px;color:var(--muted);font-size:13px;}
+.drawer-empty span{font-size:40px;display:block;margin-bottom:12px;}
+
+/* Flashcard list */
+.fc-item{background:#F8FAFC;border:1px solid var(--border);border-radius:9px;padding:12px 36px 12px 14px;margin-bottom:8px;}
+.fc-front{font-size:13px;font-weight:600;color:var(--text);margin-bottom:3px;}
+.fc-back{font-size:12px;color:var(--muted);line-height:1.5;}
+.fc-meta{font-size:10px;color:#9CA3AF;margin-top:5px;display:flex;gap:6px;align-items:center;}
+.fc-tag{background:var(--blue-lt);color:var(--blue);border-radius:4px;padding:1px 6px;font-size:10px;font-weight:600;}
+.fc-del-btn{position:absolute;top:8px;right:10px;background:none;border:none;color:#D1D5DB;cursor:pointer;font-size:16px;line-height:1;}
+.fc-del-btn:hover{color:var(--red);}
+.fc-item{position:relative;}
+
+/* Review mode */
+.fc-progress{font-size:11px;color:var(--muted);text-align:center;margin:4px 0 6px;}
+.fc-flip-hint{font-size:11px;color:var(--muted);text-align:center;margin-bottom:8px;}
+.fc-flip-inner{background:#F8FAFC;border:2px solid var(--border);border-radius:14px;min-height:160px;display:flex;align-items:center;justify-content:center;padding:28px;text-align:center;cursor:pointer;transition:all .2s;font-size:15px;font-weight:600;color:var(--text);line-height:1.5;}
+.fc-flip-inner:hover{border-color:var(--blue);}
+.fc-flip-inner.flipped{background:var(--blue-lt);border-color:var(--blue);font-weight:400;}
+.fc-rev-actions{display:flex;gap:8px;margin-top:10px;}
+.fc-knew-btn,.fc-skip-btn{flex:1;padding:9px;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;}
+.fc-knew-btn{background:var(--green-bg);color:var(--green);}
+.fc-skip-btn{background:#F3F4F6;color:var(--muted);}
+
+/* Create form */
+.fc-form{display:flex;flex-direction:column;gap:6px;}
+.fc-form-lbl{font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--muted);margin-top:6px;}
+.fc-form textarea{border:1.5px solid var(--border);border-radius:8px;padding:10px 12px;font-family:inherit;font-size:13px;resize:vertical;min-height:68px;outline:none;transition:border .15s;width:100%;}
+.fc-form textarea:focus{border-color:var(--blue);}
+.fc-form-tag-input{border:1.5px solid var(--border);border-radius:8px;padding:8px 12px;font-family:inherit;font-size:13px;outline:none;transition:border .15s;width:100%;}
+.fc-form-tag-input:focus{border-color:var(--blue);}
+.fc-save-btn{background:var(--blue);color:#fff;border:none;border-radius:8px;padding:10px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;transition:background .15s;margin-top:6px;width:100%;}
+.fc-save-btn:hover{background:var(--blue-h);}
+.fc-form-msg{font-size:12px;text-align:center;color:var(--green);min-height:16px;margin-top:4px;}
+
+/* Flagged items */
+.flag-item{background:#FFFBEB;border:1px solid #FDE68A;border-radius:9px;padding:12px 14px;margin-bottom:8px;}
+.flag-item-text{font-size:12px;color:var(--text);line-height:1.5;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden;}
+.flag-item-meta{font-size:10px;color:#9CA3AF;margin-top:4px;}
+.flag-item-btns{display:flex;gap:6px;margin-top:8px;}
+.flag-item-btn{font-size:11px;padding:4px 10px;border-radius:6px;border:none;cursor:pointer;font-family:inherit;font-weight:600;}
+.flag-review-btn{background:var(--blue-lt);color:var(--blue);}
+.flag-del-btn{background:#FEE2E2;color:var(--red);}
+
+/* Flag + flashcard buttons on cards */
+.q-flag-btn{background:none;border:none;color:rgba(255,255,255,.3);cursor:pointer;font-size:15px;padding:2px 5px;border-radius:5px;transition:all .15s;line-height:1;}
+.q-flag-btn:hover{color:#FB923C;}
+.q-flag-btn.flagged{color:#FB923C;}
+.fc-quick-btn{background:var(--blue-lt);color:var(--blue);border:1px solid #BFDBFE;border-radius:7px;padding:8px 14px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .15s;}
+.fc-quick-btn:hover{background:var(--blue);color:#fff;}
 </style>
 </head>
 <body>
@@ -289,6 +368,27 @@ body{font-family:'Inter',sans-serif;background:var(--page);color:var(--text);hei
   <header class="app-header">
     <div class="hdr-logo">🩺 <span>GEMA</span>-MED</div>
     <div class="hdr-session"><strong id="hdr-week">USMLE Tutor</strong> <span id="hdr-phase"></span></div>
+
+    <!-- TOOLS -->
+    <div class="hdr-tools">
+      <!-- Racha -->
+      <span class="hdr-streak" title="Días consecutivos estudiando">🔥<span id="streak-count">0</span></span>
+      <div class="hdr-vsep"></div>
+      <!-- Timer Pomodoro -->
+      <button class="hdr-tool-btn" id="timer-btn" onclick="toggleTimer()" title="Pomodoro 25 min — click para iniciar/pausar, doble click para reiniciar" ondblclick="resetTimer()">⏱ <span class="hdr-timer" id="timer-display">25:00</span></button>
+      <div class="hdr-vsep"></div>
+      <!-- Preguntas marcadas -->
+      <button class="hdr-tool-btn" onclick="showFlagged()" title="Preguntas marcadas">📌<span class="hdr-badge hidden" id="flag-badge">0</span></button>
+      <!-- Mis flashcards -->
+      <button class="hdr-tool-btn" onclick="showFlashcards()" title="Mis Flashcards">📇<span class="hdr-badge hidden" id="fc-badge">0</span></button>
+      <div class="hdr-vsep"></div>
+      <!-- Links externos -->
+      <button class="hdr-ext" onclick="window.open('https://sketchy.com','_blank')" title="Sketchy Medical — Micro y Farmacología visual">🎨 Sketchy</button>
+      <button class="hdr-ext" onclick="window.open('https://apps.ankiweb.net','_blank')" title="AnkiWeb — Repetición espaciada">🃏 Anki</button>
+      <button class="hdr-ext" onclick="window.open('https://www.nbme.org/self-assessments','_blank')" title="NBME Self-Assessments oficiales">📝 NBME</button>
+      <button class="hdr-ext" onclick="window.open('https://www.amboss.com','_blank')" title="Amboss Q-Bank">🔬 Amboss</button>
+    </div>
+
     <div class="hdr-stats">
       <span class="hdr-chip">Hoy: <b id="hdr-today">0</b> Qs</span>
       <span class="hdr-chip">Precisión: <b id="hdr-acc">–</b></span>
@@ -390,6 +490,32 @@ body{font-family:'Inter',sans-serif;background:var(--page);color:var(--text);hei
   </div>
 </div>
 
+<!-- ── BACKDROP ── -->
+<div class="drawer-backdrop" id="drawer-backdrop" onclick="closeAllDrawers()"></div>
+
+<!-- ── FLASHCARD DRAWER ── -->
+<div class="drawer" id="fc-drawer">
+  <div class="drawer-hdr">
+    <span class="drawer-title">📇 Mis Flashcards</span>
+    <button class="drawer-close" onclick="closeFcDrawer()">×</button>
+  </div>
+  <div class="drawer-tabs">
+    <button class="dtab active" data-tab="list"    onclick="switchFcTab('list')">Lista</button>
+    <button class="dtab"        data-tab="crear"   onclick="switchFcTab('crear')">+ Crear</button>
+    <button class="dtab"        data-tab="repasar" onclick="switchFcTab('repasar')">Repasar</button>
+  </div>
+  <div class="drawer-body" id="fc-body"></div>
+</div>
+
+<!-- ── FLAGGED DRAWER ── -->
+<div class="drawer" id="flag-drawer">
+  <div class="drawer-hdr">
+    <span class="drawer-title">📌 Preguntas Marcadas</span>
+    <button class="drawer-close" onclick="closeFlagDrawer()">×</button>
+  </div>
+  <div class="drawer-body" id="flag-body" style="padding-top:14px;"></div>
+</div>
+
 <script>
 const API = window.location.origin;
 const PH  = {diagnostic:'Diagnóstico',systems:'Primer pase',review:'Consolidación',simulation:'Simulación'};
@@ -431,6 +557,7 @@ document.addEventListener('DOMContentLoaded',async()=>{
   document.getElementById('chat-input').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendInput();}});
   document.getElementById('chat-input').addEventListener('input',autosize);
   updateWeeks(); previewWeek();
+  initStreak(); updateFcBadge(); updateFlagBadge();
   if(token){await loadMe();}else{show('auth');}
 });
 
@@ -682,7 +809,10 @@ function renderQuestionCard(parsed,raw){
   card.innerHTML=`
     <div class="q-card-header">
       <span class="q-card-badge">🩺 <strong>${topicLabel}</strong></span>
-      <span class="q-card-num">Pregunta ${questionCount}</span>
+      <span style="display:flex;align-items:center;gap:8px;">
+        <span class="q-card-num">Pregunta ${questionCount}</span>
+        <button class="q-flag-btn" id="flagbtn-${id}" onclick="toggleFlag('${id}')" title="Marcar para repasar">🔖</button>
+      </span>
     </div>
     <div class="q-body">
       <div class="q-vignette">${esc(parsed.vignette)}</div>
@@ -751,12 +881,15 @@ async function submitOpt(cardId){
     }
     stEl.remove();
     renderExplanation(fullText,cardId,letter);
+    bumpStreak();
     await refreshProgress();
   }catch(ex){const r=document.getElementById(stId);if(r)r.remove();appendChatCard('Error: '+ex.message);}
   loading=false;document.getElementById('send-btn').disabled=false;
 }
 
+let lastExplainText='',lastExplainCardId='';
 function renderExplanation(text,cardId,letter){
+  lastExplainText=text;lastExplainCardId=cardId;
   const isCorrect=/correcto|correct/i.test(text)&&!/incorrecto|incorrect/i.test(text.split('\n')[0]);
   const plain=text.replace(/\*\*/g,'').replace(/\*/g,'');
 
@@ -781,8 +914,9 @@ function renderExplanation(text,cardId,letter){
     </div>
     <div class="exp-body">${marked.parse(text)}</div>
     <div class="exp-footer">
-      <button class="next-btn" onclick="newQuestion()">Siguiente pregunta →</button>
+      <button class="next-btn" onclick="newQuestion()">Siguiente →</button>
       <button class="ask-btn" onclick="document.getElementById('chat-input').focus();document.getElementById('chat-input').placeholder='Pregunta sobre este tema...'">Preguntar al tutor</button>
+      <button class="fc-quick-btn" onclick="openFcFromExplanation('${cardId}')">💡 Guardar flashcard</button>
     </div>`;
   document.getElementById('q-area').appendChild(exp);
   scrollBottom();
@@ -817,6 +951,200 @@ function autosize(){const el=document.getElementById('chat-input');el.style.heig
 async function refreshProgress(){
   if(!token)return;
   try{const r=await api('/me');updateUI(r.plan,r.progress);}catch{}
+}
+
+// ── STREAK ──────────────────────────────────────────────────────────────────
+let streak=parseInt(localStorage.getItem('gema_streak')||'0');
+function initStreak(){
+  const today=new Date().toDateString();
+  const last=localStorage.getItem('gema_last_study');
+  if(last&&last!==today){
+    const yesterday=new Date(Date.now()-86400000).toDateString();
+    if(last!==yesterday){streak=0;localStorage.setItem('gema_streak','0');}
+  }
+  const el=document.getElementById('streak-count');if(el)el.textContent=streak||'0';
+}
+function bumpStreak(){
+  const today=new Date().toDateString();
+  if(localStorage.getItem('gema_last_study')===today)return;
+  const last=localStorage.getItem('gema_last_study');
+  const yesterday=new Date(Date.now()-86400000).toDateString();
+  streak=(last===yesterday)?streak+1:1;
+  localStorage.setItem('gema_streak',String(streak));
+  localStorage.setItem('gema_last_study',today);
+  const el=document.getElementById('streak-count');if(el)el.textContent=streak;
+}
+
+// ── POMODORO TIMER ───────────────────────────────────────────────────────────
+let timerSecs=25*60,timerOn=false,timerItv=null,timerBreak=false;
+function toggleTimer(){
+  if(timerOn){clearInterval(timerItv);timerOn=false;document.getElementById('timer-btn').classList.remove('on');}
+  else{timerOn=true;document.getElementById('timer-btn').classList.add('on');timerItv=setInterval(timerTick,1000);}
+}
+function timerTick(){
+  timerSecs--;
+  if(timerSecs<=0){
+    timerBreak=!timerBreak;timerSecs=timerBreak?5*60:25*60;
+    appendChatCard(timerBreak?'⏱ **¡Bloque terminado!** Toma 5 minutos de descanso 🧘':'☕ **Descanso terminado** — ¡de vuelta al estudio!');
+  }
+  const m=String(Math.floor(timerSecs/60)).padStart(2,'0');
+  const s=String(timerSecs%60).padStart(2,'0');
+  const d=document.getElementById('timer-display');
+  if(d){d.textContent=`${m}:${s}`;d.classList.toggle('urgent',!timerBreak&&timerSecs<=60);}
+}
+function resetTimer(){
+  clearInterval(timerItv);timerOn=false;timerBreak=false;timerSecs=25*60;
+  const d=document.getElementById('timer-display');if(d){d.textContent='25:00';d.classList.remove('urgent');}
+  document.getElementById('timer-btn').classList.remove('on');
+}
+
+// ── DRAWERS UTILS ────────────────────────────────────────────────────────────
+function openDrawer(){document.getElementById('drawer-backdrop').classList.add('show');}
+function closeAllDrawers(){
+  document.getElementById('fc-drawer').classList.remove('open');
+  document.getElementById('flag-drawer').classList.remove('open');
+  document.getElementById('drawer-backdrop').classList.remove('show');
+}
+
+// ── FLAGGED QUESTIONS ────────────────────────────────────────────────────────
+let flagged=JSON.parse(localStorage.getItem('gema_flagged')||'[]');
+function saveFlagged(){localStorage.setItem('gema_flagged',JSON.stringify(flagged));updateFlagBadge();}
+function updateFlagBadge(){
+  const b=document.getElementById('flag-badge');if(!b)return;
+  b.textContent=flagged.length;b.classList.toggle('hidden',flagged.length===0);
+}
+function toggleFlag(cardId){
+  const raw=questionRawData[cardId]||'';
+  const idx=flagged.findIndex(f=>f.id===cardId);
+  const btn=document.getElementById('flagbtn-'+cardId);
+  if(idx>=0){flagged.splice(idx,1);if(btn)btn.classList.remove('flagged');}
+  else{
+    const snippet=raw.replace(/\*\*/g,'').split('\n').filter(l=>l.trim()).slice(1,5).join(' ').substring(0,280);
+    flagged.push({id:cardId,text:snippet||raw.substring(0,280),date:new Date().toLocaleDateString()});
+    if(btn)btn.classList.add('flagged');
+  }
+  saveFlagged();
+}
+function showFlagged(){
+  openDrawer();document.getElementById('flag-drawer').classList.add('open');
+  renderFlagDrawer();
+}
+function closeFlagDrawer(){document.getElementById('flag-drawer').classList.remove('open');document.getElementById('drawer-backdrop').classList.remove('show');}
+function renderFlagDrawer(){
+  const body=document.getElementById('flag-body');
+  if(!flagged.length){body.innerHTML='<div class="drawer-empty"><span>📌</span>Sin preguntas marcadas.<br>Usa el 🔖 en cada pregunta para guardarlas aquí.</div>';return;}
+  body.innerHTML=flagged.map((f,i)=>`
+    <div class="flag-item">
+      <div class="flag-item-text">${esc(f.text)}</div>
+      <div class="flag-item-meta">📅 ${f.date}</div>
+      <div class="flag-item-btns">
+        <button class="flag-item-btn flag-review-btn" onclick="closeFlagDrawer();askQuestion('Repasa esta pregunta que marqué:\\n'+${JSON.stringify(f.text.substring(0,120))})">↩ Repasar</button>
+        <button class="flag-item-btn flag-del-btn" onclick="deleteFlagged(${i})">Quitar</button>
+      </div>
+    </div>`).join('');
+}
+function deleteFlagged(i){
+  const id=flagged[i].id;flagged.splice(i,1);saveFlagged();renderFlagDrawer();
+  const btn=document.getElementById('flagbtn-'+id);if(btn)btn.classList.remove('flagged');
+}
+
+// ── FLASHCARDS ───────────────────────────────────────────────────────────────
+let flashcards=JSON.parse(localStorage.getItem('gema_flashcards')||'[]');
+let fcTab='list',fcRevIdx=0,fcRevFlipped=false;
+function saveFlashcards(){localStorage.setItem('gema_flashcards',JSON.stringify(flashcards));updateFcBadge();}
+function updateFcBadge(){
+  const b=document.getElementById('fc-badge');if(!b)return;
+  b.textContent=flashcards.length;b.classList.toggle('hidden',flashcards.length===0);
+}
+function createFlashcard(front,back,tag){
+  if(!front.trim()||!back.trim())return false;
+  flashcards.push({id:'fc'+Date.now(),front:front.trim(),back:back.trim(),tag:(tag||activeTopic||'general'),created:new Date().toLocaleDateString()});
+  saveFlashcards();return true;
+}
+function deleteFlashcard(id){flashcards=flashcards.filter(f=>f.id!==id);saveFlashcards();renderFcDrawer();}
+function showFlashcards(tab){
+  fcTab=tab||'list';openDrawer();
+  document.getElementById('fc-drawer').classList.add('open');
+  renderFcDrawer();
+}
+function closeFcDrawer(){document.getElementById('fc-drawer').classList.remove('open');document.getElementById('drawer-backdrop').classList.remove('show');}
+function switchFcTab(tab){
+  fcTab=tab;fcRevFlipped=false;
+  document.querySelectorAll('#fc-drawer .dtab').forEach(t=>t.classList.toggle('active',t.dataset.tab===tab));
+  renderFcDrawer();
+}
+function renderFcDrawer(){
+  const body=document.getElementById('fc-body');if(!body)return;
+  if(fcTab==='list'){
+    if(!flashcards.length){body.innerHTML='<div class="drawer-empty"><span>📇</span>Sin flashcards aún.<br>Crea una o guárdalas desde las explicaciones con 💡</div>';return;}
+    body.innerHTML=flashcards.map(f=>`
+      <div class="fc-item">
+        <div class="fc-front">${esc(f.front)}</div>
+        <div class="fc-back">${esc(f.back)}</div>
+        <div class="fc-meta">${f.tag?`<span class="fc-tag">${esc(f.tag)}</span>`:''}<span>📅 ${f.created}</span></div>
+        <button class="fc-del-btn" onclick="deleteFlashcard('${f.id}')" title="Eliminar">×</button>
+      </div>`).join('');
+  } else if(fcTab==='crear'){
+    body.innerHTML=`<div class="fc-form">
+      <div class="fc-form-lbl">Frente — pregunta o concepto</div>
+      <textarea id="fc-front" placeholder="¿Cuál es el mecanismo de la metformina?"></textarea>
+      <div class="fc-form-lbl">Reverso — respuesta</div>
+      <textarea id="fc-back" placeholder="Inhibe gluconeogénesis hepática (complejo I mitocondrial)"></textarea>
+      <div class="fc-form-lbl">Tema (opcional)</div>
+      <input class="fc-form-tag-input" id="fc-tag-input" placeholder="pharmacology" value="${activeTopic||''}">
+      <button class="fc-save-btn" onclick="submitCreateFc()">💾 Guardar flashcard</button>
+      <div class="fc-form-msg" id="fc-form-msg"></div>
+    </div>`;
+  } else if(fcTab==='repasar'){
+    if(!flashcards.length){body.innerHTML='<div class="drawer-empty"><span>🎯</span>Sin flashcards para repasar.<br>Crea algunas primero.</div>';return;}
+    fcRevIdx=Math.min(fcRevIdx,flashcards.length-1);fcRevFlipped=false;
+    const f=flashcards[fcRevIdx];
+    body.innerHTML=`
+      <div class="fc-progress">Tarjeta ${fcRevIdx+1} / ${flashcards.length}${f.tag?` · <span class="fc-tag">${esc(f.tag)}</span>`:''}</div>
+      <div class="fc-flip-hint">👆 Toca la tarjeta para revelar la respuesta</div>
+      <div class="fc-flip-inner" id="fc-flip-card" onclick="flipFcCard()"
+        data-front="${esc(f.front)}" data-back="${esc(f.back)}">${esc(f.front)}</div>
+      <div class="fc-rev-actions" id="fc-rev-actions" style="display:none;margin-top:10px">
+        <button class="fc-knew-btn" onclick="nextFcCard(true)">✓ Lo sabía</button>
+        <button class="fc-skip-btn" onclick="nextFcCard(false)">✗ Repasar de nuevo</button>
+      </div>`;
+  }
+}
+function submitCreateFc(){
+  const front=document.getElementById('fc-front')?.value||'';
+  const back=document.getElementById('fc-back')?.value||'';
+  const tag=document.getElementById('fc-tag-input')?.value||'';
+  if(!front.trim()||!back.trim()){return;}
+  if(createFlashcard(front,back,tag)){
+    document.getElementById('fc-front').value='';document.getElementById('fc-back').value='';
+    const msg=document.getElementById('fc-form-msg');
+    if(msg){msg.textContent='✅ ¡Guardada!';setTimeout(()=>{msg.textContent='';},2000);}
+    updateFcBadge();
+  }
+}
+function flipFcCard(){
+  fcRevFlipped=!fcRevFlipped;
+  const card=document.getElementById('fc-flip-card');
+  const actions=document.getElementById('fc-rev-actions');
+  if(!card)return;
+  card.textContent=fcRevFlipped?card.dataset.back:card.dataset.front;
+  card.classList.toggle('flipped',fcRevFlipped);
+  if(actions)actions.style.display=fcRevFlipped?'flex':'none';
+}
+function nextFcCard(knew){
+  if(!knew){const c=flashcards.splice(fcRevIdx,1)[0];flashcards.push(c);}
+  else{fcRevIdx=(fcRevIdx+1)%flashcards.length;}
+  fcRevFlipped=false;renderFcDrawer();
+}
+function openFcFromExplanation(cardId){
+  const raw=questionRawData[cardId]||'';
+  const vignette=raw.replace(/\*\*/g,'').split('\n').filter(l=>l.trim()&&!/USMLE Step|Escribe tu respuesta|Write your answer|^---$|^[A-D]\)/i.test(l)).slice(0,4).join(' ').substring(0,300);
+  const explain=lastExplainText.replace(/\*\*/g,'').split('\n').filter(l=>l.trim()).slice(0,4).join(' ').substring(0,300);
+  showFlashcards('crear');
+  setTimeout(()=>{
+    const fEl=document.getElementById('fc-front');const bEl=document.getElementById('fc-back');
+    if(fEl)fEl.value=vignette;if(bEl)bEl.value=explain;
+  },80);
 }
 
 // API — throws {message, status} so callers can distinguish 401 vs network error
