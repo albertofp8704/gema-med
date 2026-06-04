@@ -43,6 +43,7 @@ TOOLS = [
                             "gastroenterology", "endocrinology", "hematology",
                             "pharmacology", "microbiology", "pathology",
                             "ob_gyn", "pediatrics", "psychiatry", "biostatistics",
+                            "anatomy", "physiology", "biochemistry",
                         ],
                     },
                     "step": {
