@@ -804,6 +804,23 @@ async function api(path,opts={}){
   const d=await r.json().catch(()=>({}));
   if(!r.ok)throw new Error(d.detail||`Error ${r.status}`);return d;
 }
+
+// Initialize app on page load
+async function init(){
+  if(token){
+    try{
+      const me=await api('/me');user=me.user;show('app');loadHome();
+    }catch{
+      token=null;localStorage.removeItem('gema_token');show('auth');
+    }
+  }else{
+    show('auth');
+  }
+}
+
+// Run on page load
+window.addEventListener('DOMContentLoaded',init);
+init();
 </script>
 </body>
 </html>
