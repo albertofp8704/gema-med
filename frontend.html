@@ -1,734 +1,697 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
 <title>GEMA-MED — USMLE Tutor</title>
 <script src="https://cdn.jsdelivr.net/npm/marked@9/marked.min.js"></script>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Merriweather:wght@400;700&display=swap" rel="stylesheet"/>
 <style>
 :root{
-  --bg:#F0F4F8;--sidebar:#0D2137;--accent:#2563EB;--accent2:#1D4ED8;
-  --success:#16A34A;--error:#DC2626;--warn:#D97706;
-  --text:#111827;--muted:#6B7280;--border:#DDE3EC;
-  --card:#FFFFFF;--radius:12px;
+  --header:  #0D1F3C;
+  --sidebar: #162B50;
+  --sb-hover:#1E3A6E;
+  --sb-act:  #1B5EBE;
+  --page:    #EEF2F7;
+  --card:    #FFFFFF;
+  --blue:    #1B5EBE;
+  --blue-h:  #154EA0;
+  --blue-lt: #EBF2FF;
+  --green:   #15803D;
+  --green-bg:#F0FDF4;
+  --red:     #B91C1C;
+  --red-bg:  #FEF2F2;
+  --amber:   #B45309;
+  --amber-bg:#FFFBEB;
+  --text:    #111827;
+  --muted:   #6B7280;
+  --border:  #D1D5DB;
+  --radius:  10px;
 }
 *{box-sizing:border-box;margin:0;padding:0;}
-body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);height:100vh;overflow:hidden;}
+body{font-family:'Inter',sans-serif;background:var(--page);color:var(--text);height:100vh;overflow:hidden;}
 
 /* ── OVERLAYS ── */
-.overlay{position:fixed;inset:0;background:rgba(13,33,55,.85);display:flex;align-items:center;justify-content:center;z-index:100;backdrop-filter:blur(4px);}
+.overlay{position:fixed;inset:0;background:rgba(13,31,60,.88);display:flex;align-items:center;justify-content:center;z-index:200;backdrop-filter:blur(6px);}
 .overlay.hidden{display:none;}
-.card{background:var(--card);border-radius:20px;padding:36px;width:100%;max-width:420px;box-shadow:0 20px 60px rgba(0,0,0,.25);}
-.card h1{font-size:22px;font-weight:700;margin-bottom:4px;}
-.card .sub{font-size:13px;color:var(--muted);margin-bottom:24px;}
+.modal{background:var(--card);border-radius:18px;padding:36px 40px;width:100%;max-width:440px;box-shadow:0 24px 64px rgba(0,0,0,.3);}
+.modal-logo{text-align:center;margin-bottom:24px;}
+.modal-logo span{font-size:40px;}
+.modal-logo h1{font-size:22px;font-weight:700;margin-top:8px;letter-spacing:-.5px;}
+.modal-logo p{font-size:13px;color:var(--muted);margin-top:2px;}
 
-/* tabs */
-.tabs{display:flex;gap:4px;background:#F1F5F9;border-radius:10px;padding:4px;margin-bottom:20px;}
+.tabs{display:flex;background:#F3F4F6;border-radius:10px;padding:3px;margin-bottom:22px;}
 .tab{flex:1;padding:8px;border:none;background:transparent;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;color:var(--muted);font-family:inherit;transition:all .15s;}
-.tab.active{background:var(--card);color:var(--accent);font-weight:600;box-shadow:0 1px 4px rgba(0,0,0,.1);}
+.tab.active{background:#fff;color:var(--blue);font-weight:600;box-shadow:0 1px 3px rgba(0,0,0,.1);}
 
-/* fields */
 .field{margin-bottom:14px;}
-.field label{display:block;font-size:12px;font-weight:600;color:var(--muted);margin-bottom:5px;text-transform:uppercase;letter-spacing:.5px;}
-.field input,.field select{width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;font-family:inherit;outline:none;background:var(--card);transition:border .15s;}
-.field input:focus,.field select:focus{border-color:var(--accent);}
+.field label{display:block;font-size:11px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;color:var(--muted);margin-bottom:5px;}
+.field input,.field select{width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:9px;font-size:14px;font-family:inherit;outline:none;background:#fff;transition:border .15s;}
+.field input:focus,.field select:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(27,94,190,.1);}
 .field select{cursor:pointer;}
 
-/* buttons */
-.btn{width:100%;padding:11px;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .15s;}
-.btn-primary{background:var(--accent);color:#fff;}
-.btn-primary:hover{background:var(--accent2);}
-.btn-ghost{background:transparent;color:var(--muted);font-size:13px;margin-top:10px;}
+.btn-primary{width:100%;padding:11px;background:var(--blue);color:#fff;border:none;border-radius:9px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;transition:background .15s;margin-top:4px;}
+.btn-primary:hover{background:var(--blue-h);}
+.btn-ghost{width:100%;padding:9px;background:transparent;border:none;color:var(--muted);font-size:13px;cursor:pointer;font-family:inherit;margin-top:6px;}
 .btn-ghost:hover{color:var(--text);}
-.err-msg{color:var(--error);font-size:13px;margin-top:8px;text-align:center;min-height:18px;}
+.form-err{color:var(--red);font-size:13px;text-align:center;min-height:16px;margin-top:8px;}
 
-/* plan setup */
-.week-preview{background:#F8FAFC;border:1px solid var(--border);border-radius:10px;padding:14px;margin:14px 0;font-size:13px;}
-.week-preview h4{font-size:13px;font-weight:700;color:var(--accent);margin-bottom:8px;}
-.week-preview ul{list-style:none;padding:0;}
-.week-preview li{padding:3px 0;color:var(--muted);}
-.week-preview li::before{content:"→ ";color:var(--accent);}
-.phase-tag{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600;margin-bottom:8px;}
-.phase-diagnostic{background:#FEF3C7;color:#92400E;}
-.phase-systems{background:#DBEAFE;color:#1E40AF;}
-.phase-review{background:#D1FAE5;color:#065F46;}
-.phase-simulation{background:#EDE9FE;color:#5B21B6;}
+/* plan */
+.plan-modal{max-width:520px;}
+.week-preview{background:#F8FAFC;border:1px solid var(--border);border-radius:9px;padding:14px;margin:12px 0;font-size:13px;}
+.week-preview h4{font-weight:700;color:var(--blue);margin-bottom:8px;}
+.week-preview ul{list-style:none;}
+.week-preview li{padding:2px 0;color:var(--muted);}
+.week-preview li::before{content:"→ ";color:var(--blue);}
+.phase-pill{display:inline-block;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:600;margin-bottom:8px;}
+.ph-diag{background:#FEF3C7;color:#92400E;}
+.ph-sys {background:#DBEAFE;color:#1E40AF;}
+.ph-rev {background:#D1FAE5;color:#065F46;}
+.ph-sim {background:#EDE9FE;color:#5B21B6;}
 
-/* ── MAIN APP ── */
-#app{display:flex;height:100vh;overflow:hidden;}
+/* ── APP LAYOUT ── */
+#app{display:flex;flex-direction:column;height:100vh;}
 #app.hidden{display:none;}
 
-/* sidebar */
-#sidebar{width:230px;min-width:230px;background:var(--sidebar);display:flex;flex-direction:column;padding:0;overflow-y:auto;}
-.sb-header{padding:16px 14px 12px;border-bottom:1px solid #1E3A5A;display:flex;align-items:center;gap:10px;}
-.sb-logo{font-size:16px;font-weight:700;color:#fff;}
-.sb-logo span{color:#60A5FA;}
-.sb-avatar{width:32px;height:32px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0;}
-.sb-username{font-size:13px;color:#E2E8F0;font-weight:600;flex:1;truncate:ellipsis;}
+/* Header */
+.app-header{background:var(--header);height:52px;display:flex;align-items:center;padding:0 16px 0 0;gap:0;flex-shrink:0;}
+.hdr-logo{padding:0 20px;font-size:17px;font-weight:700;color:#fff;white-space:nowrap;border-right:1px solid rgba(255,255,255,.1);}
+.hdr-logo span{color:#60A5FA;}
+.hdr-session{flex:1;padding:0 16px;font-size:13px;color:rgba(255,255,255,.6);}
+.hdr-session strong{color:#fff;}
+.hdr-stats{display:flex;gap:12px;padding:0 16px;border-left:1px solid rgba(255,255,255,.1);}
+.hdr-chip{font-size:12px;color:rgba(255,255,255,.65);}
+.hdr-chip b{color:#fff;}
+.hdr-user{display:flex;align-items:center;gap:8px;padding:0 0 0 16px;border-left:1px solid rgba(255,255,255,.1);}
+.hdr-avatar{width:30px;height:30px;border-radius:50%;background:var(--blue);color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;}
+.hdr-name{font-size:13px;color:rgba(255,255,255,.8);max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.hdr-btn{background:none;border:none;color:rgba(255,255,255,.5);font-size:12px;cursor:pointer;padding:4px 6px;border-radius:5px;}
+.hdr-btn:hover{color:#fff;background:rgba(255,255,255,.1);}
 
-.sb-section{padding:12px 14px 4px;}
-.sb-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#4B6A87;margin-bottom:8px;}
+/* Body */
+.app-body{display:flex;flex:1;overflow:hidden;}
 
-/* plan box */
-.plan-box{padding:4px 14px 12px;border-bottom:1px solid #1A3352;}
-.plan-title{font-size:13px;font-weight:700;color:#fff;margin-bottom:2px;}
-.plan-meta{font-size:11px;color:#6B8FAD;}
-.week-badge{display:inline-flex;align-items:center;gap:6px;margin-top:8px;background:#1A3352;border-radius:8px;padding:6px 10px;}
-.week-num{font-size:18px;font-weight:700;color:#60A5FA;}
-.week-info{font-size:11px;color:#94A3B8;}
-.week-name{font-size:12px;color:#CBD5E1;font-weight:600;}
+/* Sidebar */
+.sidebar{width:220px;min-width:220px;background:var(--sidebar);display:flex;flex-direction:column;overflow-y:auto;flex-shrink:0;}
+.sb-section{padding:12px 14px 6px;}
+.sb-sec-title{font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4B6A87;margin-bottom:8px;}
 
-/* today box */
-.today-box{padding:10px 14px;border-bottom:1px solid #1A3352;}
-.today-label{font-size:11px;color:#6B8FAD;margin-bottom:6px;}
-.q-bar-wrap{background:#1A3352;border-radius:6px;height:8px;overflow:hidden;margin-bottom:4px;}
-.q-bar-fill{height:100%;background:linear-gradient(90deg,#2563EB,#60A5FA);border-radius:6px;transition:width .5s;}
-.q-count{font-size:11px;color:#94A3B8;display:flex;justify-content:space-between;}
-.q-count .done{color:#60A5FA;font-weight:600;}
+/* Filter buttons */
+.filter-btn{display:flex;align-items:center;gap:8px;width:100%;padding:7px 10px;background:transparent;border:none;color:#94A3B8;border-radius:7px;cursor:pointer;font-family:inherit;font-size:13px;text-align:left;transition:all .15s;}
+.filter-btn:hover{background:var(--sb-hover);color:#fff;}
+.filter-btn.active{background:var(--sb-act);color:#fff;font-weight:600;}
+.filter-btn .f-dot{width:8px;height:8px;border-radius:50%;background:currentColor;opacity:.5;flex-shrink:0;}
+.filter-btn.active .f-dot{opacity:1;}
 
-/* accuracy */
-.acc-box{padding:8px 14px;border-bottom:1px solid #1A3352;}
-.acc-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;}
-.acc-row span{font-size:11px;color:#6B8FAD;}
-.acc-val{font-size:13px;font-weight:700;}
+.step-row{display:flex;gap:4px;padding:2px 10px 10px;}
+.step-pill{flex:1;padding:5px;background:#1A3352;border:1px solid #2A4A6A;color:#6B8FAD;border-radius:7px;font-size:12px;font-weight:500;cursor:pointer;font-family:inherit;text-align:center;transition:all .15s;border:none;}
+.step-pill:hover,.step-pill.active{background:var(--blue);color:#fff;font-weight:600;}
 
-/* topics mini */
-.topics-mini{padding:8px 14px;flex:1;}
-.topic-item{display:flex;justify-content:space-between;align-items:center;padding:3px 0;font-size:11px;}
-.topic-name{color:#94A3B8;truncate:ellipsis;max-width:120px;}
-.topic-acc{font-weight:600;}
-.acc-good{color:#4ADE80;}
-.acc-mid{color:#FCD34D;}
-.acc-bad{color:#F87171;}
+/* Stats box */
+.stats-box{margin:6px 14px;background:#0F1F3A;border-radius:10px;padding:12px;}
+.stat-row{display:flex;justify-content:space-between;font-size:12px;color:#6B8FAD;padding:2px 0;}
+.stat-row b{color:#E2E8F0;}
+.stat-bar{background:#1A3352;border-radius:4px;height:6px;margin:6px 0;}
+.stat-bar-fill{height:100%;border-radius:4px;background:linear-gradient(90deg,#1B5EBE,#60A5FA);transition:width .5s;}
 
-/* sidebar actions */
-.sb-actions{padding:12px 14px;border-top:1px solid #1A3352;display:flex;flex-direction:column;gap:6px;margin-top:auto;}
-.sb-btn{background:transparent;border:1px solid #2A4A6A;color:#6B8FAD;border-radius:8px;padding:7px 10px;font-size:12px;cursor:pointer;font-family:inherit;text-align:left;transition:all .15s;display:flex;align-items:center;gap:6px;}
-.sb-btn:hover{border-color:var(--accent);color:#60A5FA;}
-.sb-btn.danger:hover{border-color:var(--error);color:#FCA5A5;}
+/* Plan box */
+.plan-box{margin:8px 14px;background:#0F1F3A;border-radius:10px;padding:12px;}
+.plan-week{font-size:22px;font-weight:700;color:#60A5FA;line-height:1;}
+.plan-of{font-size:12px;color:#4B6A87;margin-bottom:4px;}
+.plan-name{font-size:12px;color:#CBD5E1;font-weight:600;margin-bottom:6px;}
+.plan-date{font-size:11px;color:#4B6A87;}
+.plan-days{font-size:11px;color:#60A5FA;font-weight:600;}
 
-/* ── CHAT ── */
-#chat-main{flex:1;display:flex;flex-direction:column;overflow:hidden;}
-#chat-header{background:var(--card);border-bottom:1px solid var(--border);padding:12px 20px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
-#chat-header h2{font-size:14px;font-weight:600;}
-#chat-header p{font-size:12px;color:var(--muted);}
-.header-stats{display:flex;gap:8px;}
-.stat-chip{background:#F1F5F9;border-radius:20px;padding:4px 10px;font-size:11px;color:var(--muted);font-weight:500;}
-.stat-chip b{color:var(--accent);}
+.sb-divider{height:1px;background:#1A3352;margin:4px 14px;}
 
-#messages{flex:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:14px;background:var(--bg);}
-.bubble-row{display:flex;align-items:flex-end;gap:8px;}
-.bubble-row.user{flex-direction:row-reverse;}
-.avatar{width:30px;height:30px;border-radius:50%;font-size:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
-.avatar.agent{background:#DBEAFE;}
-.avatar.user{background:var(--accent);color:#fff;}
-.bubble{max-width:74%;padding:11px 16px;border-radius:var(--radius);font-size:14px;line-height:1.6;word-break:break-word;}
-.bubble.agent{background:var(--card);color:var(--text);border-bottom-left-radius:4px;box-shadow:0 1px 4px rgba(0,0,0,.07);}
-.bubble.user{background:var(--accent);color:#fff;border-bottom-right-radius:4px;}
-.bubble.agent h1,.bubble.agent h2,.bubble.agent h3{font-size:14px;font-weight:700;margin:10px 0 4px;color:#1E3A5F;}
-.bubble.agent p{margin:4px 0;}
-.bubble.agent ul,.bubble.agent ol{padding-left:16px;margin:4px 0;}
-.bubble.agent hr{border:none;border-top:1px solid var(--border);margin:8px 0;}
-.bubble.agent code{background:#F1F5F9;padding:1px 5px;border-radius:4px;font-size:12px;color:#1E3A5F;}
-.bubble.agent pre{background:#F1F5F9;border-radius:8px;padding:10px;margin:6px 0;overflow-x:auto;font-size:12px;}
-.bubble.agent strong{color:#1E3A5F;}
-.bubble.agent table{border-collapse:collapse;width:100%;font-size:12px;margin:6px 0;}
-.bubble.agent th{background:#EFF6FF;padding:5px 8px;border:1px solid var(--border);}
-.bubble.agent td{padding:4px 8px;border:1px solid var(--border);}
+/* Action buttons */
+.action-btn{display:flex;align-items:center;gap:8px;width:100%;padding:8px 14px;background:transparent;border:none;color:#6B8FAD;font-family:inherit;font-size:12px;cursor:pointer;text-align:left;transition:all .15s;}
+.action-btn:hover{color:#60A5FA;}
+.action-btn .a-icon{font-size:14px;width:16px;text-align:center;}
+.sb-bottom{margin-top:auto;border-top:1px solid #1A3352;padding:8px 0;}
 
-@keyframes bd{0%,80%,100%{transform:scale(.7);opacity:.5}40%{transform:scale(1);opacity:1}}
-.dot{width:8px;height:8px;background:#CBD5E1;border-radius:50%;display:inline-block;}
-.d1{animation:bd 1.2s infinite 0ms}.d2{animation:bd 1.2s infinite 200ms}.d3{animation:bd 1.2s infinite 400ms}
+/* ── MAIN CONTENT ── */
+.content{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+#q-area{flex:1;overflow-y:auto;padding:20px 24px;display:flex;flex-direction:column;gap:16px;}
 
-#input-bar{background:var(--card);border-top:1px solid var(--border);padding:12px 16px;display:flex;gap:10px;align-items:flex-end;flex-shrink:0;}
-#input{flex:1;border:1.5px solid var(--border);border-radius:10px;padding:10px 14px;font-size:14px;font-family:inherit;resize:none;outline:none;max-height:120px;line-height:1.5;transition:border .15s;}
-#input:focus{border-color:var(--accent);}
-#send-btn{background:var(--accent);color:#fff;border:none;border-radius:10px;padding:10px 16px;font-size:13px;font-weight:600;font-family:inherit;cursor:pointer;transition:background .15s;white-space:nowrap;flex-shrink:0;}
-#send-btn:hover{background:var(--accent2);}
+/* Empty / Welcome */
+.welcome-card{background:var(--card);border-radius:12px;padding:32px;text-align:center;border:1px solid var(--border);}
+.welcome-card h2{font-size:20px;font-weight:700;color:#1E3A5F;margin-bottom:6px;}
+.welcome-card p{font-size:14px;color:var(--muted);margin-bottom:20px;}
+.quick-grid{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;}
+.quick-chip{background:var(--blue-lt);color:var(--blue);border:1px solid #BFDBFE;border-radius:8px;padding:7px 14px;font-size:13px;cursor:pointer;transition:all .15s;border:none;font-family:inherit;}
+.quick-chip:hover{background:var(--blue);color:#fff;}
+
+/* Question card */
+.q-card{background:var(--card);border-radius:12px;border:1px solid var(--border);overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.06);}
+.q-card-header{background:var(--header);padding:12px 18px;display:flex;align-items:center;justify-content:space-between;}
+.q-card-badge{font-size:12px;color:rgba(255,255,255,.7);font-weight:500;}
+.q-card-badge strong{color:#fff;}
+.q-card-num{font-size:12px;color:rgba(255,255,255,.4);}
+.q-body{padding:22px 24px 0;}
+.q-vignette{font-family:'Merriweather',serif;font-size:14px;line-height:1.75;color:var(--text);white-space:pre-wrap;}
+.q-stem{font-size:14px;font-weight:600;color:#1E3A5F;margin:16px 0 14px;line-height:1.5;}
+.q-options{display:flex;flex-direction:column;gap:8px;padding:0 24px 20px;}
+.opt-btn{display:flex;align-items:flex-start;gap:12px;padding:13px 16px;border:2px solid var(--border);border-radius:9px;background:#fff;cursor:pointer;text-align:left;transition:all .15s;width:100%;font-family:inherit;}
+.opt-btn:hover:not(.locked){border-color:var(--blue);background:var(--blue-lt);}
+.opt-btn.selected{border-color:var(--blue);background:var(--blue-lt);}
+.opt-btn.correct{border-color:var(--green);background:var(--green-bg);}
+.opt-btn.wrong{border-color:var(--red);background:var(--red-bg);}
+.opt-letter{min-width:28px;height:28px;border-radius:50%;background:#F3F4F6;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s;}
+.opt-btn.selected .opt-letter{background:var(--blue);color:#fff;}
+.opt-btn.correct .opt-letter{background:var(--green);color:#fff;}
+.opt-btn.wrong .opt-letter{background:var(--red);color:#fff;}
+.opt-text{font-size:14px;line-height:1.5;color:var(--text);flex:1;}
+.q-footer{padding:14px 24px;border-top:1px solid #F3F4F6;display:flex;align-items:center;gap:10px;}
+.confirm-btn{background:var(--blue);color:#fff;border:none;border-radius:8px;padding:10px 20px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .15s;}
+.confirm-btn:hover:not(:disabled){background:var(--blue-h);}
+.confirm-btn:disabled{background:#9CA3AF;cursor:not-allowed;}
+.skip-btn{background:none;border:1px solid var(--border);color:var(--muted);border-radius:8px;padding:10px 16px;font-size:13px;cursor:pointer;font-family:inherit;transition:all .15s;}
+.skip-btn:hover{border-color:var(--text);color:var(--text);}
+
+/* Explanation card */
+.exp-card{background:var(--card);border-radius:12px;border:1px solid var(--border);overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.06);}
+.exp-header{padding:14px 20px;display:flex;align-items:center;gap:12px;border-bottom:1px solid #F3F4F6;}
+.exp-verdict{font-size:16px;font-weight:700;}
+.exp-verdict.correct{color:var(--green);}
+.exp-verdict.wrong{color:var(--red);}
+.exp-ans{font-size:13px;color:var(--muted);}
+.exp-body{padding:20px 24px;}
+.exp-body h4{font-size:13px;font-weight:700;color:#1E3A5F;margin:14px 0 6px;text-transform:uppercase;letter-spacing:.3px;}
+.exp-body h4:first-child{margin-top:0;}
+.exp-body p,.exp-body li{font-size:14px;line-height:1.7;color:var(--text);}
+.exp-body ul{padding-left:18px;}
+.exp-body li{margin:4px 0;}
+.exp-body .hiyield{background:var(--amber-bg);border-left:3px solid var(--amber);padding:10px 14px;border-radius:0 8px 8px 0;font-size:13px;margin-top:8px;}
+.exp-body .fa-ref{background:var(--blue-lt);border-left:3px solid var(--blue);padding:8px 14px;border-radius:0 8px 8px 0;font-size:13px;margin-top:8px;color:var(--blue);}
+.exp-footer{padding:14px 24px;border-top:1px solid #F3F4F6;display:flex;gap:10px;}
+.next-btn{background:var(--blue);color:#fff;border:none;border-radius:8px;padding:10px 20px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;transition:background .15s;}
+.next-btn:hover{background:var(--blue-h);}
+.ask-btn{background:none;border:1px solid var(--border);color:var(--muted);border-radius:8px;padding:10px 16px;font-size:13px;cursor:pointer;font-family:inherit;transition:all .15s;}
+.ask-btn:hover{border-color:var(--blue);color:var(--blue);}
+
+/* Chat message (for non-question responses) */
+.chat-card{background:var(--card);border-radius:12px;border:1px solid var(--border);overflow:hidden;}
+.chat-role{padding:10px 18px;background:#F8FAFC;border-bottom:1px solid var(--border);font-size:12px;font-weight:600;color:#4B6A87;display:flex;align-items:center;gap:6px;}
+.chat-body{padding:16px 20px;font-size:14px;line-height:1.7;}
+.chat-body h1,.chat-body h2,.chat-body h3{font-size:15px;font-weight:700;color:#1E3A5F;margin:12px 0 6px;}
+.chat-body p{margin:6px 0;}
+.chat-body ul,.chat-body ol{padding-left:18px;margin:6px 0;}
+.chat-body li{margin:3px 0;}
+.chat-body hr{border:none;border-top:1px solid var(--border);margin:10px 0;}
+.chat-body code{background:#F3F4F6;padding:1px 5px;border-radius:4px;font-size:12px;color:#1E3A5F;}
+.chat-body strong{color:#1E3A5F;}
+.chat-body table{border-collapse:collapse;width:100%;font-size:13px;margin:8px 0;}
+.chat-body th{background:var(--blue-lt);padding:6px 10px;border:1px solid var(--border);}
+.chat-body td{padding:5px 10px;border:1px solid var(--border);}
+
+/* User message bubble */
+.user-msg{background:var(--blue);color:#fff;border-radius:12px;padding:12px 18px;font-size:14px;align-self:flex-end;max-width:70%;}
+
+/* Loading */
+.loading-card{background:var(--card);border-radius:12px;border:1px solid var(--border);padding:20px 24px;display:flex;align-items:center;gap:12px;}
+@keyframes pulse{0%,80%,100%{transform:scale(.7);opacity:.5}40%{transform:scale(1);opacity:1}}
+.dot{width:8px;height:8px;background:#9CA3AF;border-radius:50%;display:inline-block;}
+.d1{animation:pulse 1.2s infinite 0ms}.d2{animation:pulse 1.2s infinite 200ms}.d3{animation:pulse 1.2s infinite 400ms}
+
+/* Input bar */
+.input-bar{background:var(--card);border-top:1px solid var(--border);padding:12px 20px;display:flex;gap:10px;align-items:flex-end;flex-shrink:0;}
+#chat-input{flex:1;border:1.5px solid var(--border);border-radius:9px;padding:10px 14px;font-size:14px;font-family:inherit;resize:none;outline:none;max-height:100px;line-height:1.5;transition:border .15s;}
+#chat-input:focus{border-color:var(--blue);}
+#send-btn{background:var(--blue);color:#fff;border:none;border-radius:9px;padding:10px 18px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap;transition:background .15s;}
+#send-btn:hover{background:var(--blue-h);}
 #send-btn:disabled{background:#93C5FD;cursor:not-allowed;}
 
-/* welcome */
-#welcome{text-align:center;padding:40px 20px;}
-#welcome h2{font-size:20px;font-weight:700;color:#1E3A5F;margin-bottom:6px;}
-#welcome p{font-size:13px;color:var(--muted);margin-bottom:16px;}
-.quick-btn{display:inline-block;background:#EFF6FF;color:var(--accent);border:1px solid #BFDBFE;border-radius:10px;padding:7px 13px;margin:4px;cursor:pointer;font-size:12px;transition:all .15s;}
-.quick-btn:hover{background:var(--accent);color:#fff;border-color:var(--accent);}
-
-::-webkit-scrollbar{width:5px}
-::-webkit-scrollbar-track{background:transparent}
-::-webkit-scrollbar-thumb{background:#CBD5E1;border-radius:3px}
+::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:#CBD5E1;border-radius:3px}
 </style>
 </head>
 <body>
 
 <!-- ── AUTH OVERLAY ── -->
 <div id="auth-overlay" class="overlay">
-  <div class="card">
-    <div style="text-align:center;margin-bottom:20px">
-      <div style="font-size:36px;margin-bottom:8px">🩺</div>
-      <h1>GEMA-MED</h1>
-      <p class="sub">Tutor IA para USMLE Step 1 / 2 CK / 3</p>
-    </div>
+  <div class="modal">
+    <div class="modal-logo"><span>🩺</span><h1>GEMA-MED</h1><p>Tutor IA para USMLE Step 1 / 2 CK / 3</p></div>
     <div class="tabs">
-      <button class="tab active" onclick="switchTab('login')">Ingresar</button>
-      <button class="tab" onclick="switchTab('register')">Registro</button>
+      <button class="tab active" onclick="authTab('login')">Ingresar</button>
+      <button class="tab" onclick="authTab('register')">Registro</button>
     </div>
-    <!-- Login form -->
     <div id="login-form">
       <div class="field"><label>Usuario</label><input id="l-user" type="text" placeholder="tu usuario" autocomplete="username"/></div>
-      <div class="field"><label>Contraseña</label><input id="l-pass" type="password" placeholder="••••••" autocomplete="current-password"/></div>
-      <button class="btn btn-primary" onclick="doLogin()">Ingresar →</button>
-      <p class="err-msg" id="login-err"></p>
+      <div class="field"><label>Contraseña</label><input id="l-pass" type="password" placeholder="••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()"/></div>
+      <button class="btn-primary" onclick="doLogin()">Ingresar →</button>
+      <div class="form-err" id="l-err"></div>
     </div>
-    <!-- Register form -->
     <div id="register-form" style="display:none">
       <div class="field"><label>Nombre</label><input id="r-name" type="text" placeholder="Dr. García" autocomplete="name"/></div>
-      <div class="field"><label>Usuario</label><input id="r-user" type="text" placeholder="tu usuario único" autocomplete="username"/></div>
+      <div class="field"><label>Usuario</label><input id="r-user" type="text" placeholder="usuario único" autocomplete="username"/></div>
       <div class="field"><label>Contraseña</label><input id="r-pass" type="password" placeholder="mínimo 6 caracteres" autocomplete="new-password"/></div>
-      <button class="btn btn-primary" onclick="doRegister()">Crear cuenta →</button>
-      <p class="err-msg" id="reg-err"></p>
+      <button class="btn-primary" onclick="doRegister()">Crear cuenta →</button>
+      <div class="form-err" id="r-err"></div>
     </div>
-    <button class="btn btn-ghost" onclick="guestMode()">Continuar sin cuenta</button>
+    <button class="btn-ghost" onclick="guestMode()">Continuar sin cuenta</button>
   </div>
 </div>
 
-<!-- ── PLAN SETUP OVERLAY ── -->
+<!-- ── PLAN OVERLAY ── -->
 <div id="plan-overlay" class="overlay hidden">
-  <div class="card" style="max-width:480px">
-    <h1>Configura tu Plan</h1>
-    <p class="sub">Personaliza tu preparación para el USMLE Step 1</p>
-
-    <div class="field">
-      <label>📅 Fecha objetivo del examen</label>
-      <input id="p-date" type="date"/>
-    </div>
-    <div class="field">
-      <label>📚 Tipo de plan</label>
-      <select id="p-type" onchange="updateWeekOptions()">
+  <div class="modal plan-modal">
+    <div class="modal-logo"><span>📅</span><h1>Plan de Estudio</h1><p>Configura tu preparación para el USMLE</p></div>
+    <div class="field"><label>Fecha objetivo del examen</label><input id="p-date" type="date"/></div>
+    <div class="field"><label>Tipo de plan</label>
+      <select id="p-type" onchange="updateWeeks()">
         <option value="12_week">12 semanas — Estándar ⭐</option>
         <option value="6_week">6 semanas — Intensivo</option>
       </select>
     </div>
     <div style="display:flex;gap:12px">
-      <div class="field" style="flex:1">
-        <label>📝 Preguntas / día</label>
-        <select id="p-qday">
-          <option value="40">40 (mínimo)</option>
-          <option value="60" selected>60 (moderado)</option>
-          <option value="80">80 (intensivo)</option>
-        </select>
+      <div class="field" style="flex:1"><label>Preguntas / día</label>
+        <select id="p-qday"><option value="40">40 (mínimo)</option><option value="60" selected>60 (moderado)</option><option value="80">80 (intensivo)</option></select>
       </div>
-      <div class="field" style="flex:1">
-        <label>🌍 Idioma</label>
-        <select id="p-lang">
-          <option value="bilingual">Bilingüe ⭐</option>
-          <option value="es">Español</option>
-          <option value="en">English</option>
-        </select>
+      <div class="field" style="flex:1"><label>Idioma</label>
+        <select id="p-lang"><option value="bilingual">Bilingüe ⭐</option><option value="es">Español</option><option value="en">English</option></select>
       </div>
     </div>
-    <div class="field">
-      <label>📍 Semana actual</label>
-      <select id="p-week" onchange="renderWeekPreview()"></select>
-    </div>
-    <div id="week-preview" class="week-preview"></div>
-    <button class="btn btn-primary" onclick="savePlan()">Guardar plan y empezar →</button>
-    <p class="err-msg" id="plan-err"></p>
+    <div class="field"><label>Semana actual</label><select id="p-week" onchange="previewWeek()"></select></div>
+    <div id="wk-preview" class="week-preview"></div>
+    <button class="btn-primary" onclick="savePlan()">Guardar y empezar →</button>
+    <div class="form-err" id="p-err"></div>
   </div>
 </div>
 
 <!-- ── MAIN APP ── -->
 <div id="app" class="hidden">
-  <!-- Sidebar -->
-  <aside id="sidebar">
-    <div class="sb-header">
-      <div class="sb-logo">🩺 <span>GEMA</span>-MED</div>
+  <!-- Header -->
+  <header class="app-header">
+    <div class="hdr-logo">🩺 <span>GEMA</span>-MED</div>
+    <div class="hdr-session"><strong id="hdr-week">USMLE Tutor</strong> <span id="hdr-phase"></span></div>
+    <div class="hdr-stats">
+      <span class="hdr-chip">Hoy: <b id="hdr-today">0</b> Qs</span>
+      <span class="hdr-chip">Precisión: <b id="hdr-acc">–</b></span>
     </div>
+    <div class="hdr-user">
+      <div class="hdr-avatar" id="hdr-av">G</div>
+      <span class="hdr-name" id="hdr-name">Usuario</span>
+      <button class="hdr-btn" onclick="showPlanEdit()" title="Editar plan">⚙</button>
+      <button class="hdr-btn" onclick="logout()" title="Cerrar sesión">⎋</button>
+    </div>
+  </header>
 
-    <!-- User info -->
-    <div style="display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid #1A3352;">
-      <div class="sb-avatar" id="sb-avatar">G</div>
-      <div style="flex:1;min-width:0;">
-        <div id="sb-name" style="font-size:13px;font-weight:600;color:#E2E8F0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Usuario</div>
-        <div id="sb-username" style="font-size:11px;color:#6B8FAD;">@usuario</div>
+  <div class="app-body">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sb-section">
+        <div class="sb-sec-title">Sistema</div>
+        <div id="filter-list">
+          <button class="filter-btn active" data-topic="" onclick="setTopic(this,'')"><span class="f-dot"></span>Todos</button>
+          <button class="filter-btn" data-topic="cardiology"       onclick="setTopic(this,'cardiology')"><span class="f-dot"></span>🫀 Cardiology</button>
+          <button class="filter-btn" data-topic="pulmonology"      onclick="setTopic(this,'pulmonology')"><span class="f-dot"></span>🫁 Pulmonology</button>
+          <button class="filter-btn" data-topic="nephrology"       onclick="setTopic(this,'nephrology')"><span class="f-dot"></span>⚕️ Nephrology</button>
+          <button class="filter-btn" data-topic="gastroenterology" onclick="setTopic(this,'gastroenterology')"><span class="f-dot"></span>🏥 Gastroenterology</button>
+          <button class="filter-btn" data-topic="hematology"       onclick="setTopic(this,'hematology')"><span class="f-dot"></span>🩸 Hematology</button>
+          <button class="filter-btn" data-topic="neurology"        onclick="setTopic(this,'neurology')"><span class="f-dot"></span>🧠 Neurology</button>
+          <button class="filter-btn" data-topic="psychiatry"       onclick="setTopic(this,'psychiatry')"><span class="f-dot"></span>🧘 Psychiatry</button>
+          <button class="filter-btn" data-topic="endocrinology"    onclick="setTopic(this,'endocrinology')"><span class="f-dot"></span>🧬 Endocrinology</button>
+          <button class="filter-btn" data-topic="pharmacology"     onclick="setTopic(this,'pharmacology')"><span class="f-dot"></span>💊 Pharmacology</button>
+          <button class="filter-btn" data-topic="microbiology"     onclick="setTopic(this,'microbiology')"><span class="f-dot"></span>🔬 Microbiology</button>
+          <button class="filter-btn" data-topic="pathology"        onclick="setTopic(this,'pathology')"><span class="f-dot"></span>🔭 Pathology</button>
+          <button class="filter-btn" data-topic="biostatistics"    onclick="setTopic(this,'biostatistics')"><span class="f-dot"></span>📊 Biostatistics</button>
+        </div>
       </div>
-    </div>
 
-    <!-- Plan box -->
-    <div class="plan-box">
-      <div class="sb-label">Plan de estudio</div>
-      <div id="sb-plan-type" class="plan-title">–</div>
-      <div id="sb-target" class="plan-meta">–</div>
-      <div class="week-badge">
-        <div>
-          <div style="display:flex;align-items:baseline;gap:4px;">
-            <span class="week-num" id="sb-week">1</span>
-            <span class="week-info" id="sb-total-weeks">/ 12</span>
+      <div class="sb-section" style="padding-bottom:10px">
+        <div class="sb-sec-title">Step</div>
+        <div class="step-row">
+          <button class="step-pill active" id="sp1" onclick="setStep(1)">Step 1</button>
+          <button class="step-pill" id="sp2" onclick="setStep(2)">Step 2</button>
+          <button class="step-pill" id="sp3" onclick="setStep(3)">Step 3</button>
+        </div>
+      </div>
+
+      <div class="sb-divider"></div>
+
+      <!-- Stats -->
+      <div class="sb-section"><div class="sb-sec-title">Rendimiento hoy</div></div>
+      <div class="stats-box">
+        <div class="stat-row"><span>Preguntas</span><b><span id="sb-done">0</span>/<span id="sb-goal">60</span></b></div>
+        <div class="stat-bar"><div class="stat-bar-fill" id="sb-bar" style="width:0%"></div></div>
+        <div class="stat-row"><span>Precisión global</span><b id="sb-acc">–</b></div>
+        <div class="stat-row"><span>Total respondidas</span><b id="sb-total">0</b></div>
+      </div>
+
+      <!-- Plan -->
+      <div class="sb-section"><div class="sb-sec-title">Plan de estudio</div></div>
+      <div class="plan-box">
+        <div class="plan-of">Semana</div>
+        <div style="display:flex;align-items:baseline;gap:4px"><span class="plan-week" id="sb-wk">–</span><span style="font-size:12px;color:#4B6A87" id="sb-wk-of">/12</span></div>
+        <div class="plan-name" id="sb-wk-name">–</div>
+        <div class="plan-date" id="sb-date">–</div>
+        <div class="plan-days" id="sb-days">–</div>
+      </div>
+
+      <div class="sb-divider"></div>
+      <div style="padding:4px 0 8px">
+        <button class="action-btn" onclick="askQuestion('Quiero hacer mi diagnóstico inicial con 40 preguntas mixtas de todos los sistemas')"><span class="a-icon">🔍</span>Diagnóstico inicial</button>
+        <button class="action-btn" onclick="askQuestion('Quiero hacer un simulacro de 40 preguntas mixtas cronometradas como el examen real')"><span class="a-icon">🎯</span>Simulacro completo</button>
+        <button class="action-btn" onclick="askQuestion('¿Cuáles son mis temas más débiles? Muéstrame el reporte de debilidades con porcentajes.')"><span class="a-icon">💪</span>Ver debilidades</button>
+        <button class="action-btn" onclick="askQuestion('Muéstrame mi progreso completo y el plan de esta semana con las actividades de hoy.')"><span class="a-icon">📊</span>Mi progreso</button>
+        <div class="sb-divider" style="margin:4px 0"></div>
+        <button class="action-btn" onclick="showPlanEdit()"><span class="a-icon">⚙️</span>Editar plan</button>
+        <button class="action-btn" style="color:#F87171" onclick="logout()"><span class="a-icon">⎋</span>Cerrar sesión</button>
+      </div>
+    </aside>
+
+    <!-- Main content -->
+    <main class="content">
+      <div id="q-area">
+        <div class="welcome-card">
+          <h2>👋 Bienvenido a GEMA-MED</h2>
+          <p>Selecciona un sistema en el panel izquierdo y haz clic en "Nueva pregunta", o elige una acción rápida.</p>
+          <div class="quick-grid">
+            <button class="quick-chip" onclick="newQuestion('cardiology','step1')">🫀 Nueva pregunta — Cardio Step 1</button>
+            <button class="quick-chip" onclick="newQuestion('pharmacology','step1')">💊 Farmacología Step 1</button>
+            <button class="quick-chip" onclick="newQuestion('microbiology','step1')">🔬 Microbiología Step 1</button>
+            <button class="quick-chip" onclick="newQuestion('neurology','step2')">🧠 Neurología Step 2</button>
+            <button class="quick-chip" onclick="askQuestion('Explícame la ruta ECFMG completa para médicos graduados en Cuba')">🇨🇺 Ruta ECFMG</button>
+            <button class="quick-chip" onclick="newQuestion()">🎲 Pregunta aleatoria</button>
           </div>
-          <div class="week-name" id="sb-week-name">Diagnóstico</div>
-        </div>
-        <div style="margin-left:auto;">
-          <span id="sb-phase-tag" class="phase-tag phase-diagnostic">Diagnóstico</span>
         </div>
       </div>
-    </div>
 
-    <!-- Today -->
-    <div class="today-box">
-      <div class="today-label">Hoy</div>
-      <div class="q-bar-wrap"><div class="q-bar-fill" id="q-bar" style="width:0%"></div></div>
-      <div class="q-count"><span class="done" id="q-done">0</span><span id="q-goal">/ 60 preguntas</span></div>
-    </div>
-
-    <!-- Accuracy -->
-    <div class="acc-box">
-      <div class="acc-row">
-        <span>Precisión global</span>
-        <span class="acc-val" id="sb-acc">–</span>
+      <div class="input-bar">
+        <textarea id="chat-input" rows="1" placeholder="Escribe tu respuesta (A/B/C/D) o pregunta directamente al tutor..."></textarea>
+        <button id="send-btn" onclick="sendInput()">Enviar ↵</button>
       </div>
-      <div class="acc-row">
-        <span>Total respondidas</span>
-        <span style="font-size:12px;color:#94A3B8;" id="sb-total">0</span>
-      </div>
-    </div>
-
-    <!-- Topics mini -->
-    <div class="topics-mini">
-      <div class="sb-label">Por tema</div>
-      <div id="sb-topics"></div>
-    </div>
-
-    <!-- Actions -->
-    <div class="sb-actions">
-      <button class="sb-btn" onclick="quickSend('Quiero hacer mi diagnóstico inicial: 40 preguntas mixtas de todos los sistemas')">🔍 Diagnóstico inicial</button>
-      <button class="sb-btn" onclick="quickSend('Quiero hacer un simulacro de 40 preguntas mixtas cronometrado')">🎯 Simulacro</button>
-      <button class="sb-btn" onclick="quickSend('¿Cuáles son mis temas más débiles? Muestra el reporte de debilidades.')">💪 Ver debilidades</button>
-      <button class="sb-btn" onclick="showPlanEdit()">⚙️ Editar plan</button>
-      <button class="sb-btn danger" onclick="logout()">→ Cerrar sesión</button>
-    </div>
-  </aside>
-
-  <!-- Chat main -->
-  <main id="chat-main">
-    <div id="chat-header">
-      <div>
-        <h2 id="hdr-title">GEMA-MED — USMLE Tutor</h2>
-        <p id="hdr-sub">Selecciona un tema o escribe una pregunta</p>
-      </div>
-      <div class="header-stats">
-        <div class="stat-chip">Hoy: <b id="hdr-today">0</b> Qs</div>
-        <div class="stat-chip">Precisión: <b id="hdr-acc">–</b></div>
-      </div>
-    </div>
-
-    <div id="messages">
-      <div id="welcome">
-        <div style="font-size:40px;margin-bottom:10px">🩺</div>
-        <h2>¡Hola! Soy GEMA-MED</h2>
-        <p>Tu tutor IA para el USMLE. Empieza con una acción rápida o escribe directamente.</p>
-        <div style="margin-top:12px">
-          <span class="quick-btn" onclick="quickSend('Dame una pregunta de cardiology del Step 1')">🫀 Cardio Step 1</span>
-          <span class="quick-btn" onclick="quickSend('Dame una pregunta de pharmacology')">💊 Farmacología</span>
-          <span class="quick-btn" onclick="quickSend('Dame una pregunta de microbiology')">🔬 Microbiología</span>
-          <span class="quick-btn" onclick="quickSend('Dame una pregunta de neurology del Step 2')">🧠 Neuro Step 2</span>
-          <span class="quick-btn" onclick="quickSend('Explícame la ruta ECFMG completa para médicos cubanos')">🇨🇺 Ruta ECFMG</span>
-          <span class="quick-btn" onclick="quickSend('Muéstrame mi progreso y plan de estudio actual')">📊 Mi progreso</span>
-        </div>
-      </div>
-    </div>
-
-    <div id="input-bar">
-      <textarea id="input" rows="1" placeholder="Escribe tu respuesta (A/B/C/D) o una pregunta..."></textarea>
-      <button id="send-btn" onclick="sendFromInput()">Enviar ↵</button>
-    </div>
-  </main>
+    </main>
+  </div>
 </div>
 
 <script>
-// ── CONFIG ────────────────────────────────────────────────────────────────────
 const API = window.location.origin;
+const PH  = {diagnostic:'Diagnóstico',systems:'Primer pase',review:'Consolidación',simulation:'Simulación'};
+const PHC = {diagnostic:'ph-diag',systems:'ph-sys',review:'ph-rev',simulation:'ph-sim'};
 
-const WEEK_PLANS = {
-  "12_week": [
-    {week:1, name:"Base y diagnóstico",       phase:"diagnostic",  emoji:"🔍", daily:40,
-     activities:["Examen diagnóstico (40 Qs mixtas)","Definir calendario semanal","Organizar recursos (FA, Pathoma, Anki)","Empezar Anki top cards"]},
-    {week:2, name:"Bioquímica",               phase:"systems",     emoji:"⚗️", daily:60,
-     activities:["First Aid: Biochemistry","Pathoma: General Principles","Anki: Biochem deck","60 preguntas/día"]},
-    {week:3, name:"Fisiología",               phase:"systems",     emoji:"🫀", daily:60,
-     activities:["First Aid: Physiology systems","Sketchy: Cardio fisiología","60 preguntas/día"]},
-    {week:4, name:"Patología",                phase:"systems",     emoji:"🔬", daily:60,
-     activities:["Pathoma completo","First Aid: Pathology highlights","60 preguntas/día"]},
-    {week:5, name:"Microbiología",            phase:"systems",     emoji:"🦠", daily:60,
-     activities:["Sketchy Micro (bacterias, virus, hongos)","First Aid: Microbiology","60 preguntas/día"]},
-    {week:6, name:"Farmacología",             phase:"systems",     emoji:"💊", daily:60,
-     activities:["Sketchy Pharm (mecanismos)","First Aid: Pharmacology","60 preguntas/día"]},
-    {week:7, name:"Consolidación — Débiles",  phase:"review",      emoji:"💪", daily:80,
-     activities:["Revisar incorrectas semanas 2-6","Segundo pase temas débiles (<60%)","Mini bloques cronometrados 20 Qs","80 preguntas/día"]},
-    {week:8, name:"Cardio + Pulmo",           phase:"review",      emoji:"🫁", daily:80,
-     activities:["FA: Cardiovascular + Pulmonary","Sketchy Cardio repaso","80 preguntas/día"]},
-    {week:9, name:"Renal + GI",               phase:"review",      emoji:"🏥", daily:80,
-     activities:["FA: Renal + GI/Liver","Pathoma: Renal y GI","Revisar acid-base","80 preguntas/día"]},
-    {week:10,name:"Neuro + Psiquiatría",      phase:"review",      emoji:"🧠", daily:80,
-     activities:["FA: Neurology + Psychiatry","Sketchy: Psych meds","Bloques mixtos","80 preguntas/día"]},
-    {week:11,name:"Simulación I",             phase:"simulation",  emoji:"🎯", daily:80,
-     activities:["2 NBME Self-Assessments","Bloques de 40 (60 min)","Revisar TODAS las incorrectas"]},
-    {week:12,name:"Simulación II + Cierre",   phase:"simulation",  emoji:"🏁", daily:40,
-     activities:["FA completo: repaso final","Solo errores repetidos","Descanso 3-5 días antes"]},
+const WEEKS = {
+  "12_week":[
+    {w:1,n:"Base y diagnóstico",    ph:"diagnostic", e:"🔍",d:40,a:["Diagnóstico 40 Qs mixtas","Definir calendario","Organizar recursos (FA, Pathoma, Anki)"]},
+    {w:2,n:"Bioquímica",            ph:"systems",    e:"⚗️",d:60,a:["First Aid: Biochemistry","Pathoma: General Principles","60 preguntas/día"]},
+    {w:3,n:"Fisiología",            ph:"systems",    e:"🫀",d:60,a:["First Aid: Physiology","Sketchy: correlacionar sistemas","60 preguntas/día"]},
+    {w:4,n:"Patología",             ph:"systems",    e:"🔬",d:60,a:["Pathoma completo","First Aid: Pathology","60 preguntas/día"]},
+    {w:5,n:"Microbiología",         ph:"systems",    e:"🦠",d:60,a:["Sketchy Micro","First Aid: Microbiology","60 preguntas/día"]},
+    {w:6,n:"Farmacología",          ph:"systems",    e:"💊",d:60,a:["Sketchy Pharm","First Aid: Pharmacology","60 preguntas/día"]},
+    {w:7,n:"Consolidación — Débiles",ph:"review",   e:"💪",d:80,a:["Revisar incorrectas 2-6","Segundo pase temas débiles","80 preguntas/día"]},
+    {w:8,n:"Cardio + Pulmo",        ph:"review",     e:"🫁",d:80,a:["FA: Cardiovascular + Pulmonary","Bloques cronometrados","80 preguntas/día"]},
+    {w:9,n:"Renal + GI",            ph:"review",     e:"🏥",d:80,a:["FA: Renal + GI/Liver","Revisar acid-base","80 preguntas/día"]},
+    {w:10,n:"Neuro + Psiquiatría",  ph:"review",     e:"🧠",d:80,a:["FA: Neurology + Psychiatry","Bloques mixtos","80 preguntas/día"]},
+    {w:11,n:"Simulación I",         ph:"simulation", e:"🎯",d:80,a:["2 NBME Self-Assessments","Bloques 40 Qs (60 min)","Revisar todas las incorrectas"]},
+    {w:12,n:"Simulación II + Cierre",ph:"simulation",e:"🏁",d:40,a:["FA completo: repaso","Errores repetidos","Descanso 3-5 días antes"]},
   ],
-  "6_week": [
-    {week:1, name:"Diagnóstico + Bioquímica", phase:"diagnostic",  emoji:"🔍", daily:60,
-     activities:["Diagnóstico 40 Qs","FA+Pathoma: Biochem/Physio","60-80 preguntas/día"]},
-    {week:2, name:"Patología + Micro",        phase:"systems",     emoji:"🔬", daily:80,
-     activities:["Pathoma completo","Sketchy Micro","80 preguntas/día"]},
-    {week:3, name:"Farmacología + Cardio",    phase:"systems",     emoji:"💊", daily:80,
-     activities:["Sketchy Pharm completo","FA: Cardio + Pulmo","80 preguntas/día"]},
-    {week:4, name:"Renal + GI + Neuro",       phase:"systems",     emoji:"🏥", daily:80,
-     activities:["FA: Renal, GI, Neuro","Revisar incorrectas","80 preguntas/día"]},
-    {week:5, name:"Consolidación intensiva",  phase:"review",      emoji:"💪", daily:80,
-     activities:["Segundo pase temas débiles","Bloques 40 Qs cronometrados","NBME Free: 1 examen"]},
-    {week:6, name:"Simulación + Cierre",      phase:"simulation",  emoji:"🏁", daily:40,
-     activities:["2 NBME Self-Assessments","FA repaso final","Descanso previo"]},
-  ],
+  "6_week":[
+    {w:1,n:"Diagnóstico + Bioquímica",ph:"diagnostic",e:"🔍",d:60,a:["Diagnóstico 40 Qs","FA+Pathoma Biochem/Physio","60-80/día"]},
+    {w:2,n:"Patología + Micro",      ph:"systems",   e:"🔬",d:80,a:["Pathoma completo","Sketchy Micro","80/día"]},
+    {w:3,n:"Farmacología + Cardio",  ph:"systems",   e:"💊",d:80,a:["Sketchy Pharm","FA: Cardio+Pulmo","80/día"]},
+    {w:4,n:"Renal + GI + Neuro",    ph:"systems",   e:"🏥",d:80,a:["FA: Renal,GI,Neuro","Revisar incorrectas","80/día"]},
+    {w:5,n:"Consolidación intensiva",ph:"review",    e:"💪",d:80,a:["Segundo pase débiles","Bloques 40 Qs","NBME Free"]},
+    {w:6,n:"Simulación + Cierre",    ph:"simulation",e:"🏁",d:40,a:["2 NBME Self-Assessments","FA repaso final","Descanso"]},
+  ]
 };
 
-const PHASE_LABELS = {diagnostic:"Diagnóstico",systems:"Primer pase",review:"Consolidación",simulation:"Simulación",final:"Cierre"};
-const PHASE_CSS    = {diagnostic:"phase-diagnostic",systems:"phase-systems",review:"phase-review",simulation:"phase-simulation",final:"phase-simulation"};
+// STATE
+let token=localStorage.getItem('gema_token')||null, user=null, plan=null, sid=localStorage.getItem('gema_sid')||null;
+let activeTopic='', activeStep=1, loading=false;
 
-// ── STATE ─────────────────────────────────────────────────────────────────────
-let token     = localStorage.getItem('gema_token') || null;
-let userState = null;
-let planState = null;
-let sessionId = localStorage.getItem('gema_session') || null;
-let loading   = false;
-
-// ── INIT ──────────────────────────────────────────────────────────────────────
-document.addEventListener('DOMContentLoaded', async () => {
-  // Set min date for exam date picker
-  document.getElementById('p-date').min = new Date().toISOString().split('T')[0];
-  updateWeekOptions();
-
-  document.getElementById('input').addEventListener('keydown', e => {
-    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendFromInput(); }
-  });
-  document.getElementById('input').addEventListener('input', autoResize);
-
-  if (token) {
-    await loadMe();
-  } else {
-    show('auth');
-  }
+// INIT
+document.addEventListener('DOMContentLoaded',async()=>{
+  document.getElementById('p-date').min=new Date().toISOString().split('T')[0];
+  document.getElementById('chat-input').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendInput();}});
+  document.getElementById('chat-input').addEventListener('input',autosize);
+  updateWeeks(); previewWeek();
+  if(token){await loadMe();}else{show('auth');}
 });
 
-async function loadMe() {
-  try {
-    const res = await apiFetch('/me');
-    userState = res.user;
-    planState = res.plan;
-    updateSidebar(res.plan, res.progress);
-    show(planState?.has_plan ? 'chat' : 'plan');
-  } catch {
-    localStorage.removeItem('gema_token');
-    token = null;
-    show('auth');
-  }
+async function loadMe(){
+  try{const r=await api('/me');user=r.user;plan=r.plan;updateUI(r.plan,r.progress);show(r.plan?.has_plan?'app':'plan');}
+  catch{localStorage.removeItem('gema_token');token=null;show('auth');}
 }
 
-// ── SCREENS ───────────────────────────────────────────────────────────────────
-function show(screen) {
-  document.getElementById('auth-overlay').classList.toggle('hidden', screen !== 'auth');
-  document.getElementById('plan-overlay').classList.toggle('hidden', screen !== 'plan');
-  document.getElementById('app').classList.toggle('hidden', screen !== 'chat');
-  if (screen === 'plan') renderWeekPreview();
+function show(s){
+  document.getElementById('auth-overlay').classList.toggle('hidden',s!=='auth');
+  document.getElementById('plan-overlay').classList.toggle('hidden',s!=='plan');
+  document.getElementById('app').classList.toggle('hidden',s!=='app');
 }
 
-// ── AUTH ──────────────────────────────────────────────────────────────────────
-function switchTab(t) {
-  document.querySelectorAll('.tab').forEach((el,i)=>el.classList.toggle('active', (i===0&&t==='login')||(i===1&&t==='register')));
-  document.getElementById('login-form').style.display    = t==='login'    ? '' : 'none';
-  document.getElementById('register-form').style.display = t==='register' ? '' : 'none';
+// AUTH
+function authTab(t){
+  document.querySelectorAll('.tab').forEach((b,i)=>b.classList.toggle('active',(i===0&&t==='login')||(i===1&&t==='register')));
+  document.getElementById('login-form').style.display=t==='login'?'':'none';
+  document.getElementById('register-form').style.display=t==='register'?'':'none';
 }
+async function doLogin(){
+  const u=document.getElementById('l-user').value.trim(),p=document.getElementById('l-pass').value,e=document.getElementById('l-err');
+  e.textContent='';if(!u||!p){e.textContent='Completa todos los campos';return;}
+  try{const r=await api('/auth/login',{method:'POST',body:{username:u,password:p}});token=r.token;localStorage.setItem('gema_token',token);user=r.user;r.has_plan?await loadMe():show('plan');}
+  catch(ex){e.textContent=ex.message||'Error al ingresar';}
+}
+async function doRegister(){
+  const name=document.getElementById('r-name').value.trim(),u=document.getElementById('r-user').value.trim(),p=document.getElementById('r-pass').value,e=document.getElementById('r-err');
+  e.textContent='';if(!u||!p){e.textContent='Completa usuario y contraseña';return;}
+  try{const r=await api('/auth/register',{method:'POST',body:{username:u,password:p,display_name:name}});token=r.token;localStorage.setItem('gema_token',token);user=r.user;show('plan');}
+  catch(ex){e.textContent=ex.message||'Error al registrar';}
+}
+function guestMode(){user={username:'guest',display_name:'Invitado'};token=null;show('app');updateUI(null,null);}
+function logout(){localStorage.removeItem('gema_token');localStorage.removeItem('gema_sid');location.reload();}
 
-async function doLogin() {
-  const user = document.getElementById('l-user').value.trim();
-  const pass = document.getElementById('l-pass').value;
-  const err  = document.getElementById('login-err');
-  err.textContent = '';
-  if (!user || !pass) { err.textContent='Completa todos los campos'; return; }
-  try {
-    const res = await apiFetch('/auth/login', {method:'POST', body:{username:user, password:pass}});
-    token = res.token;
-    localStorage.setItem('gema_token', token);
-    userState = res.user;
-    if (res.has_plan) {
-      await loadMe();
-    } else {
-      show('plan');
+// PLAN
+function updateWeeks(){
+  const t=document.getElementById('p-type').value,ws=WEEKS[t]||WEEKS['12_week'],s=document.getElementById('p-week');
+  s.innerHTML=ws.map(w=>`<option value="${w.w}">Semana ${w.w} — ${w.e} ${w.n}</option>`).join('');previewWeek();
+}
+function previewWeek(){
+  const t=document.getElementById('p-type').value,wk=parseInt(document.getElementById('p-week').value)||1;
+  const ws=WEEKS[t]||WEEKS['12_week'],w=ws.find(x=>x.w===wk)||ws[0];
+  document.getElementById('wk-preview').innerHTML=`<h4>${w.e} Semana ${w.w}: ${w.n}</h4><span class="phase-pill ${PHC[w.ph]||'ph-diag'}">${PH[w.ph]||w.ph}</span><p style="font-size:11px;color:#6B7280;margin-bottom:8px">Meta: ${w.d} preguntas/día</p><ul>${w.a.map(a=>`<li>${a}</li>`).join('')}</ul>`;
+}
+async function savePlan(){
+  const err=document.getElementById('p-err');err.textContent='';
+  const d=document.getElementById('p-date').value;if(!d){err.textContent='Selecciona la fecha del examen';return;}
+  const body={target_date:d,plan_type:document.getElementById('p-type').value,daily_questions:parseInt(document.getElementById('p-qday').value),language:document.getElementById('p-lang').value,current_week:parseInt(document.getElementById('p-week').value)};
+  try{plan=await api('/me/plan',{method:'POST',body});const me=await api('/me');updateUI(me.plan,me.progress);show('app');}
+  catch(ex){err.textContent=ex.message||'Error guardando plan';}
+}
+function showPlanEdit(){if(plan?.has_plan){document.getElementById('p-date').value=plan.target_date||'';document.getElementById('p-type').value=plan.plan_type||'12_week';document.getElementById('p-qday').value=String(plan.daily_questions||60);document.getElementById('p-lang').value=plan.language||'bilingual';updateWeeks();document.getElementById('p-week').value=String(plan.current_week||1);previewWeek();}show('plan');}
+
+// SIDEBAR / HEADER
+function updateUI(pl,pr){
+  const name=user?.display_name||user?.username||'Usuario';
+  document.getElementById('hdr-av').textContent=name[0].toUpperCase();
+  document.getElementById('hdr-name').textContent=name;
+  if(pl?.has_plan){
+    const ws=WEEKS[pl.plan_type]||WEEKS['12_week'],w=ws.find(x=>x.w===pl.current_week)||ws[0];
+    document.getElementById('hdr-week').textContent=`Semana ${pl.current_week}/${ws.length} — ${w?.n||''}`;
+    document.getElementById('hdr-phase').textContent=PH[w?.ph]||'';
+    document.getElementById('sb-wk').textContent=pl.current_week;
+    document.getElementById('sb-wk-of').textContent='/'+ws.length;
+    document.getElementById('sb-wk-name').textContent=`${w?.e||''} ${w?.n||'–'}`;
+    document.getElementById('sb-date').textContent=pl.target_date?'📅 '+pl.target_date:'';
+    document.getElementById('sb-days').textContent=pl.days_left?pl.days_left+' días restantes':'';
+    if(pr){
+      const goal=pl.daily_questions||60,done=pr.answered_today||0,acc=pr.overall_accuracy,pct=Math.min(Math.round(done/goal*100),100);
+      document.getElementById('sb-done').textContent=done;document.getElementById('sb-goal').textContent=goal;
+      document.getElementById('sb-bar').style.width=pct+'%';
+      document.getElementById('sb-acc').textContent=acc?acc+'%':'–';
+      document.getElementById('sb-total').textContent=pr.total_answered;
+      document.getElementById('hdr-today').textContent=done;document.getElementById('hdr-acc').textContent=acc?acc+'%':'–';
     }
-  } catch(e) {
-    err.textContent = e.message || 'Error al ingresar';
   }
 }
 
-async function doRegister() {
-  const name = document.getElementById('r-name').value.trim();
-  const user = document.getElementById('r-user').value.trim();
-  const pass = document.getElementById('r-pass').value;
-  const err  = document.getElementById('reg-err');
-  err.textContent = '';
-  if (!user || !pass) { err.textContent='Completa usuario y contraseña'; return; }
-  try {
-    const res = await apiFetch('/auth/register', {method:'POST', body:{username:user, password:pass, display_name:name}});
-    token = res.token;
-    localStorage.setItem('gema_token', token);
-    userState = res.user;
-    show('plan');
-  } catch(e) {
-    err.textContent = e.message || 'Error al registrar';
-  }
+// FILTERS
+function setTopic(btn,topic){activeTopic=topic;document.querySelectorAll('#filter-list .filter-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');}
+function setStep(s){activeStep=s;['sp1','sp2','sp3'].forEach((id,i)=>document.getElementById(id).classList.toggle('active',i+1===s));}
+
+// QUESTION FLOW
+let questionCount=0;
+
+function newQuestion(topic,step){
+  topic=topic||activeTopic||'';
+  step=step||('step'+activeStep);
+  const msg=topic?`Dame una pregunta de ${topic} del ${step}`:`Dame una pregunta del ${step} (tema aleatorio)`;
+  askQuestion(msg);
 }
 
-function guestMode() {
-  userState = {username:'guest', display_name:'Invitado'};
-  token = null;
-  show('chat');
-  updateSidebar(null, null);
-}
-
-function logout() {
-  localStorage.removeItem('gema_token');
-  localStorage.removeItem('gema_session');
-  token = null; userState = null; planState = null; sessionId = null;
-  document.getElementById('messages').innerHTML = '<div id="welcome">...</div>';
-  show('auth');
-  location.reload();
-}
-
-// ── PLAN SETUP ────────────────────────────────────────────────────────────────
-function updateWeekOptions() {
-  const type   = document.getElementById('p-type').value;
-  const weeks  = WEEK_PLANS[type] || WEEK_PLANS['12_week'];
-  const select = document.getElementById('p-week');
-  select.innerHTML = weeks.map(w =>
-    `<option value="${w.week}">Semana ${w.week} — ${w.emoji} ${w.name}</option>`
-  ).join('');
-  renderWeekPreview();
-}
-
-function renderWeekPreview() {
-  const type = document.getElementById('p-type').value;
-  const week = parseInt(document.getElementById('p-week').value) || 1;
-  const plan = WEEK_PLANS[type] || WEEK_PLANS['12_week'];
-  const w    = plan.find(x=>x.week===week) || plan[0];
-  const phaseLabel = PHASE_LABELS[w.phase] || w.phase;
-  const phaseClass = PHASE_CSS[w.phase]   || 'phase-diagnostic';
-  document.getElementById('week-preview').innerHTML = `
-    <h4>${w.emoji} Semana ${w.week}: ${w.name}</h4>
-    <span class="phase-tag ${phaseClass}">${phaseLabel}</span>
-    <p style="font-size:11px;color:#6B7280;margin-bottom:8px">Meta: ${w.daily} preguntas/día</p>
-    <ul>${w.activities.map(a=>`<li>${a}</li>`).join('')}</ul>
-  `;
-}
-
-async function savePlan() {
-  const err  = document.getElementById('plan-err');
-  err.textContent = '';
-  const dateVal = document.getElementById('p-date').value;
-  if (!dateVal) { err.textContent='Selecciona la fecha del examen'; return; }
-  const body = {
-    target_date:     dateVal,
-    plan_type:       document.getElementById('p-type').value,
-    daily_questions: parseInt(document.getElementById('p-qday').value),
-    language:        document.getElementById('p-lang').value,
-    current_week:    parseInt(document.getElementById('p-week').value),
-  };
-  try {
-    planState = await apiFetch('/me/plan', {method:'POST', body});
-    const me  = await apiFetch('/me');
-    updateSidebar(me.plan, me.progress);
-    show('chat');
-  } catch(e) {
-    err.textContent = e.message || 'Error guardando plan';
-  }
-}
-
-function showPlanEdit() {
-  if (planState?.has_plan) {
-    document.getElementById('p-date').value  = planState.target_date || '';
-    document.getElementById('p-type').value  = planState.plan_type   || '12_week';
-    document.getElementById('p-qday').value  = String(planState.daily_questions || 60);
-    document.getElementById('p-lang').value  = planState.language    || 'bilingual';
-    updateWeekOptions();
-    document.getElementById('p-week').value  = String(planState.current_week || 1);
-    renderWeekPreview();
-  }
-  show('plan');
-}
-
-// ── SIDEBAR ───────────────────────────────────────────────────────────────────
-function updateSidebar(plan, progress) {
-  // User
-  const name = userState?.display_name || userState?.username || 'Usuario';
-  document.getElementById('sb-name').textContent    = name;
-  document.getElementById('sb-username').textContent = `@${userState?.username||'invitado'}`;
-  document.getElementById('sb-avatar').textContent  = name[0].toUpperCase();
-
-  if (!plan?.has_plan) return;
-
-  const type    = plan.plan_type || '12_week';
-  const week    = plan.current_week || 1;
-  const weeks   = WEEK_PLANS[type] || WEEK_PLANS['12_week'];
-  const wDetail = weeks.find(w=>w.week===week) || weeks[0];
-  const phase   = wDetail?.phase || 'diagnostic';
-  const total   = weeks.length;
-
-  document.getElementById('sb-plan-type').textContent = type==='12_week'?'12 semanas — Estándar':'6 semanas — Intensivo';
-  document.getElementById('sb-target').textContent    = plan.target_date
-    ? `📅 ${plan.target_date} · ${plan.days_left||'?'} días restantes` : '📅 Sin fecha';
-  document.getElementById('sb-week').textContent      = week;
-  document.getElementById('sb-total-weeks').textContent = `/ ${total}`;
-  document.getElementById('sb-week-name').textContent = `${wDetail?.emoji||''} ${wDetail?.name||'–'}`;
-
-  const ptag = document.getElementById('sb-phase-tag');
-  ptag.textContent = PHASE_LABELS[phase] || phase;
-  ptag.className   = `phase-tag ${PHASE_CSS[phase]||'phase-diagnostic'}`;
-
-  // Header
-  document.getElementById('hdr-title').textContent = `Semana ${week}/${total} — ${wDetail?.name||''}`;
-  document.getElementById('hdr-sub').textContent   = PHASE_LABELS[phase]||phase;
-
-  // Progress
-  if (progress) {
-    const goal    = plan.daily_questions || 60;
-    const done    = progress.answered_today || 0;
-    const acc     = progress.overall_accuracy;
-    const total_q = progress.total_answered;
-    const pct     = Math.min(Math.round(done/goal*100), 100);
-
-    document.getElementById('q-bar').style.width     = pct+'%';
-    document.getElementById('q-done').textContent    = done;
-    document.getElementById('q-goal').textContent    = `/ ${goal} preguntas`;
-    document.getElementById('hdr-today').textContent = done;
-    document.getElementById('hdr-acc').textContent   = acc ? acc+'%' : '–';
-
-    const accColor = acc>=70?'#22C55E':acc>=50?'#F59E0B':'#EF4444';
-    document.getElementById('sb-acc').textContent  = acc ? acc+'%' : '–';
-    document.getElementById('sb-acc').style.color  = acc ? accColor : '#94A3B8';
-    document.getElementById('sb-total').textContent = `${total_q} preguntas`;
-
-    // Topics
-    const topics = (progress.by_topic||[]).slice(0,6);
-    document.getElementById('sb-topics').innerHTML = topics.map(t=>{
-      const cls = t.accuracy>=70?'acc-good':t.accuracy>=50?'acc-mid':'acc-bad';
-      return `<div class="topic-item"><span class="topic-name">${t.topic}</span><span class="topic-acc ${cls}">${t.accuracy}%</span></div>`;
-    }).join('') || '<p style="font-size:11px;color:#4B6A87">Sin datos aún</p>';
-  }
-}
-
-async function refreshProgress() {
-  if (!token) return;
-  try {
-    const res = await apiFetch('/me');
-    updateSidebar(res.plan, res.progress);
-  } catch {}
-}
-
-// ── CHAT ──────────────────────────────────────────────────────────────────────
-function sendFromInput() {
-  const el = document.getElementById('input');
-  const txt = el.value.trim();
-  if (!txt || loading) return;
-  el.value = '';
-  el.style.height = 'auto';
-  sendMessage(txt);
-}
-
-function quickSend(txt) {
-  const welcome = document.getElementById('welcome');
-  if (welcome) welcome.remove();
-  sendMessage(txt);
-}
-
-async function sendMessage(text) {
-  const welcome = document.getElementById('welcome');
-  if (welcome) welcome.remove();
-
-  addBubble(text, 'user');
-  loading = true;
-  document.getElementById('send-btn').disabled = true;
-  const tid = addTyping();
-
-  try {
-    const body = {message: text};
-    if (sessionId) body.session_id = sessionId;
-
-    const res = await apiFetch('/chat', {method:'POST', body});
-    sessionId = res.session_id;
-    localStorage.setItem('gema_session', sessionId);
-    removeTyping(tid);
-    addBubble(res.response, 'agent');
+async function askQuestion(msg){
+  clearWelcome();
+  appendUserMsg(msg);
+  const tid=appendLoading();
+  loading=true;document.getElementById('send-btn').disabled=true;
+  try{
+    const body={message:msg};if(sid)body.session_id=sid;
+    const r=await api('/chat',{method:'POST',body});
+    sid=r.session_id;localStorage.setItem('gema_sid',sid);
+    removeEl(tid);
+    renderResponse(r.response);
     await refreshProgress();
-  } catch(e) {
-    removeTyping(tid);
-    addBubble(`❌ Error: ${e.message}`, 'agent');
-  } finally {
-    loading = false;
-    document.getElementById('send-btn').disabled = false;
-    document.getElementById('input').focus();
+  }catch(ex){removeEl(tid);appendChatCard('Error: '+ex.message);}
+  loading=false;document.getElementById('send-btn').disabled=false;
+}
+
+function sendInput(){
+  const inp=document.getElementById('chat-input'),txt=inp.value.trim();
+  if(!txt||loading)return;
+  inp.value='';inp.style.height='auto';
+  askQuestion(txt);
+}
+
+function renderResponse(text){
+  const parsed=parseQuestion(text);
+  if(parsed){renderQuestionCard(parsed,text);}
+  else{appendChatCard(text);}
+}
+
+// QUESTION PARSER
+function parseQuestion(text){
+  const plain=text.replace(/\*\*/g,'').replace(/\*/g,'');
+  const lines=plain.split('\n').map(l=>l.trim()).filter(Boolean);
+  const opts={};let vignette=[],stem='',inOpts=false;
+  for(const line of lines){
+    if(/^USMLE Step|^---$|^Escribe tu respuesta/i.test(line))continue;
+    const m=line.match(/^([A-D])\)\s+(.+)/);
+    if(m){opts[m[1]]=m[2];inOpts=true;continue;}
+    if(inOpts)continue;
+    if(line.endsWith('?')&&line.length<200&&(line.includes('siguiente')||line.includes('following')||line.includes('which')||line.includes('cuál')||line.includes('cual'))){stem=line;continue;}
+    vignette.push(line);
   }
+  if(Object.keys(opts).length<2)return null;
+  return{vignette:vignette.join('\n'),stem,opts};
 }
 
-function addBubble(text, role) {
-  const msgs = document.getElementById('messages');
-  const row  = document.createElement('div');
-  row.className = `bubble-row ${role}`;
-  const av = document.createElement('div');
-  av.className = `avatar ${role}`;
-  av.textContent = role==='agent'?'🩺':'👤';
-  const bub = document.createElement('div');
-  bub.className = `bubble ${role}`;
-  if (role==='agent') bub.innerHTML = marked.parse(text);
-  else bub.textContent = text;
-  row.appendChild(av);
-  row.appendChild(bub);
-  msgs.appendChild(row);
-  msgs.scrollTop = msgs.scrollHeight;
+function renderQuestionCard(parsed,raw){
+  questionCount++;
+  const id='qc'+Date.now();
+  const card=document.createElement('div');
+  card.className='q-card';card.id=id;
+  const topicMatch=raw.match(/USMLE Step \d[^—\n]*—\s*([^\n*]+)/i);
+  const topicLabel=topicMatch?topicMatch[1].trim():'USMLE';
+
+  card.innerHTML=`
+    <div class="q-card-header">
+      <span class="q-card-badge">🩺 <strong>${topicLabel}</strong></span>
+      <span class="q-card-num">Pregunta ${questionCount}</span>
+    </div>
+    <div class="q-body">
+      <div class="q-vignette">${esc(parsed.vignette)}</div>
+      ${parsed.stem?`<div class="q-stem">${esc(parsed.stem)}</div>`:''}
+    </div>
+    <div class="q-options">
+      ${Object.entries(parsed.opts).map(([l,t])=>`
+        <button class="opt-btn" id="opt-${id}-${l}" data-letter="${l}" onclick="selectOpt('${id}','${l}')">
+          <span class="opt-letter">${l}</span>
+          <span class="opt-text">${esc(t)}</span>
+        </button>`).join('')}
+    </div>
+    <div class="q-footer">
+      <button class="confirm-btn" id="conf-${id}" disabled onclick="submitOpt('${id}','${raw}')">Confirmar respuesta</button>
+      <button class="skip-btn" onclick="newQuestion()">Nueva pregunta →</button>
+    </div>`;
+  document.getElementById('q-area').appendChild(card);
+  scrollBottom();
 }
 
-function addTyping() {
-  const msgs = document.getElementById('messages');
-  const id   = 'typ-'+Date.now();
-  const row  = document.createElement('div');
-  row.className = 'bubble-row agent';
-  row.id = id;
-  row.innerHTML = `<div class="avatar agent">🩺</div><div class="bubble agent"><span class="dot d1"></span> <span class="dot d2"></span> <span class="dot d3"></span></div>`;
-  msgs.appendChild(row);
-  msgs.scrollTop = msgs.scrollHeight;
-  return id;
+let selectedOpts={};
+function selectOpt(cardId,letter){
+  const opts=document.querySelectorAll(`[id^="opt-${cardId}"]`);
+  opts.forEach(b=>b.classList.remove('selected'));
+  document.getElementById(`opt-${cardId}-${letter}`).classList.add('selected');
+  selectedOpts[cardId]=letter;
+  document.getElementById(`conf-${cardId}`).disabled=false;
 }
 
-function removeTyping(id) {
-  const el = document.getElementById(id);
-  if (el) el.remove();
+async function submitOpt(cardId,rawQ){
+  const letter=selectedOpts[cardId];if(!letter)return;
+  const opts=document.querySelectorAll(`[id^="opt-${cardId}"]`);
+  opts.forEach(b=>b.classList.add('locked'));
+  document.getElementById(`conf-${cardId}`).disabled=true;
+
+  const tid=appendLoading();
+  loading=true;document.getElementById('send-btn').disabled=true;
+  try{
+    const body={message:letter};if(sid)body.session_id=sid;
+    const r=await api('/chat',{method:'POST',body});
+    sid=r.session_id;localStorage.setItem('gema_sid',sid);
+    removeEl(tid);
+    renderExplanation(r.response,cardId,letter);
+    await refreshProgress();
+  }catch(ex){removeEl(tid);appendChatCard('Error: '+ex.message);}
+  loading=false;document.getElementById('send-btn').disabled=false;
 }
 
-function autoResize() {
-  const el = document.getElementById('input');
-  el.style.height = 'auto';
-  el.style.height = Math.min(el.scrollHeight, 128)+'px';
-}
+function renderExplanation(text,cardId,letter){
+  const isCorrect=/correcto|correct/i.test(text)&&!/incorrecto|incorrect/i.test(text.split('\n')[0]);
+  const plain=text.replace(/\*\*/g,'').replace(/\*/g,'');
 
-// ── API HELPER ────────────────────────────────────────────────────────────────
-async function apiFetch(path, opts={}) {
-  const headers = {'Content-Type':'application/json'};
-  if (token) headers['Authorization'] = 'Bearer '+token;
-  const res = await fetch(API+path, {
-    method: opts.method||'GET',
-    headers,
-    body: opts.body ? JSON.stringify(opts.body) : undefined,
+  // Color the option buttons
+  const opts=document.querySelectorAll(`[id^="opt-${cardId}"]`);
+  opts.forEach(b=>{
+    const l=b.dataset.letter;
+    if(l===letter){b.classList.add(isCorrect?'correct':'wrong');}
   });
-  const data = await res.json().catch(()=>({}));
-  if (!res.ok) throw new Error(data.detail || `Error ${res.status}`);
-  return data;
+
+  // Build explanation card
+  const exp=document.createElement('div');
+  exp.className='exp-card';
+  const verd=isCorrect?'✅ CORRECTO':'❌ INCORRECTO';
+  const ansMatch=plain.match(/Respuesta correcta(?:\s+es)?:\s*([A-D][^\n]*)/i)||plain.match(/La respuesta es[:\s]+([A-D][^\n]*)/i);
+  const ansText=ansMatch?ansMatch[1]:'';
+
+  exp.innerHTML=`
+    <div class="exp-header">
+      <span class="exp-verdict ${isCorrect?'correct':'wrong'}">${verd}</span>
+      ${ansText?`<span class="exp-ans">Respuesta: ${esc(ansText)}</span>`:''}
+    </div>
+    <div class="exp-body">${marked.parse(text)}</div>
+    <div class="exp-footer">
+      <button class="next-btn" onclick="newQuestion()">Siguiente pregunta →</button>
+      <button class="ask-btn" onclick="document.getElementById('chat-input').focus();document.getElementById('chat-input').placeholder='Pregunta sobre este tema...'">Preguntar al tutor</button>
+    </div>`;
+  document.getElementById('q-area').appendChild(exp);
+  scrollBottom();
+}
+
+// CHAT CARD (non-question responses)
+function appendChatCard(text){
+  const card=document.createElement('div');
+  card.className='chat-card';
+  card.innerHTML=`<div class="chat-role">🩺 GEMA-MED</div><div class="chat-body">${marked.parse(text)}</div>`;
+  document.getElementById('q-area').appendChild(card);
+  scrollBottom();
+}
+
+function appendUserMsg(text){
+  clearWelcome();
+  const div=document.createElement('div');div.className='user-msg';div.textContent=text;
+  document.getElementById('q-area').appendChild(div);scrollBottom();
+}
+function appendLoading(){
+  const id='ld'+Date.now();
+  const el=document.createElement('div');el.id=id;el.className='loading-card';
+  el.innerHTML='<div style="font-size:12px;color:#6B7280">GEMA-MED está pensando</div><span class="dot d1"></span><span class="dot d2"></span><span class="dot d3"></span>';
+  document.getElementById('q-area').appendChild(el);scrollBottom();return id;
+}
+function removeEl(id){const el=document.getElementById(id);if(el)el.remove();}
+function clearWelcome(){const w=document.querySelector('.welcome-card');if(w)w.remove();}
+function scrollBottom(){const a=document.getElementById('q-area');a.scrollTop=a.scrollHeight;}
+function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function autosize(){const el=document.getElementById('chat-input');el.style.height='auto';el.style.height=Math.min(el.scrollHeight,100)+'px';}
+
+async function refreshProgress(){
+  if(!token)return;
+  try{const r=await api('/me');updateUI(r.plan,r.progress);}catch{}
+}
+
+// API
+async function api(path,opts={}){
+  const h={'Content-Type':'application/json'};if(token)h['Authorization']='Bearer '+token;
+  const r=await fetch(API+path,{method:opts.method||'GET',headers:h,body:opts.body?JSON.stringify(opts.body):undefined});
+  const d=await r.json().catch(()=>({}));
+  if(!r.ok)throw new Error(d.detail||`Error ${r.status}`);return d;
 }
 </script>
 </body>
