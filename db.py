@@ -1,6 +1,6 @@
 """
 Database layer — SQLite (dev) / PostgreSQL (prod via DATABASE_URL).
-Uses SQLAlchemy Core so the same SQL works in both engines.
+SQLAlchemy Core — mismo SQL en ambos motores.
 """
 
 import os
@@ -13,7 +13,18 @@ DATABASE_URL = _raw.replace("postgres://", "postgresql://", 1) if _raw.startswit
 engine   = sa.create_engine(DATABASE_URL, pool_pre_ping=True)
 metadata = sa.MetaData()
 
-# ── Tables ────────────────────────────────────────────────────────────────────
+# ── Tabla: usuarios ───────────────────────────────────────────────────────────
+
+users_tbl = sa.Table(
+    "users", metadata,
+    sa.Column("id",            sa.Integer, primary_key=True, autoincrement=True),
+    sa.Column("username",      sa.String,  unique=True, nullable=False, index=True),
+    sa.Column("password_hash", sa.String,  nullable=False),
+    sa.Column("display_name",  sa.String,  nullable=True),
+    sa.Column("created_at",    sa.String,  nullable=False),
+)
+
+# ── Tabla: resultados de preguntas ────────────────────────────────────────────
 
 results_tbl = sa.Table(
     "results", metadata,
@@ -26,15 +37,20 @@ results_tbl = sa.Table(
     sa.Column("timestamp",   sa.String,  nullable=False),
 )
 
+# ── Tabla: planes de estudio ──────────────────────────────────────────────────
+
 study_plans_tbl = sa.Table(
     "study_plans", metadata,
-    sa.Column("user_id",        sa.String, primary_key=True),
-    sa.Column("target_date",    sa.String, nullable=True),   # ISO date YYYY-MM-DD
-    sa.Column("daily_goal",     sa.Integer, default=40),
-    sa.Column("current_system", sa.String, default="cardiology"),
-    sa.Column("current_phase",  sa.String, default="planning"),
-    sa.Column("created_at",     sa.String, nullable=False),
-    sa.Column("updated_at",     sa.String, nullable=False),
+    sa.Column("user_id",          sa.String,  primary_key=True),
+    sa.Column("target_date",      sa.String,  nullable=True),
+    sa.Column("plan_type",        sa.String,  default="12_week"),
+    sa.Column("daily_questions",  sa.Integer, default=60),
+    sa.Column("language",         sa.String,  default="bilingual"),
+    sa.Column("current_week",     sa.Integer, default=1),
+    sa.Column("current_system",   sa.String,  default="mixed"),
+    sa.Column("current_phase",    sa.String,  default="diagnostic"),
+    sa.Column("created_at",       sa.String,  nullable=False),
+    sa.Column("updated_at",       sa.String,  nullable=False),
 )
 
 
@@ -42,17 +58,107 @@ def init_db() -> None:
     metadata.create_all(engine)
 
 
-# ── Results ───────────────────────────────────────────────────────────────────
+# ── Planes de 12 semanas ──────────────────────────────────────────────────────
+
+TWELVE_WEEK_PLAN = [
+    {"week": 1,  "name": "Base y diagnóstico",      "phase": "diagnostic",  "system": "mixed",        "emoji": "🔍", "daily": 40,
+     "activities": ["Examen diagnóstico (40 Qs mixtas)", "Definir calendario semanal", "Organizar recursos (FA, Pathoma, Anki)", "Empezar Anki top cards"]},
+    {"week": 2,  "name": "Bioquímica",              "phase": "systems",     "system": "biochemistry",  "emoji": "⚗️", "daily": 60,
+     "activities": ["First Aid: Biochemistry chapter", "Pathoma: General Principles", "Anki: Biochemistry deck", "60 preguntas/día"]},
+    {"week": 3,  "name": "Fisiología",              "phase": "systems",     "system": "physiology",    "emoji": "🫀", "daily": 60,
+     "activities": ["First Aid: Physiology systems", "Sketchy: Cardio fisiología", "Correlacionar con patología", "60 preguntas/día"]},
+    {"week": 4,  "name": "Patología",               "phase": "systems",     "system": "pathology",     "emoji": "🔬", "daily": 60,
+     "activities": ["Pathoma completo (Goljan)", "First Aid: Pathology highlights", "Anotar errores en spreadsheet", "60 preguntas/día"]},
+    {"week": 5,  "name": "Microbiología",           "phase": "systems",     "system": "microbiology",  "emoji": "🦠", "daily": 60,
+     "activities": ["Sketchy Micro (bacterias, virus, hongos)", "First Aid: Microbiology", "Anki: Micro bugs", "60 preguntas/día"]},
+    {"week": 6,  "name": "Farmacología",            "phase": "systems",     "system": "pharmacology",  "emoji": "💊", "daily": 60,
+     "activities": ["Sketchy Pharm (todos los mecanismos)", "First Aid: Pharmacology", "Revisar efectos adversos clave", "60 preguntas/día"]},
+    {"week": 7,  "name": "Consolidación — Débiles", "phase": "review",      "system": "mixed",         "emoji": "💪", "daily": 80,
+     "activities": ["Revisar incorrectas de semanas 2-6", "Segundo pase por temas débiles (<60%)", "Mini bloques cronometrados (20 Qs)", "80 preguntas/día"]},
+    {"week": 8,  "name": "Cardio + Pulmo",          "phase": "review",      "system": "cardiology",    "emoji": "🫁", "daily": 80,
+     "activities": ["FA: Cardiovascular + Pulmonary", "Sketchy: Cardio drugs repaso", "Bloques cronometrados cardio", "80 preguntas/día"]},
+    {"week": 9,  "name": "Renal + GI",              "phase": "review",      "system": "nephrology",    "emoji": "🏥", "daily": 80,
+     "activities": ["FA: Renal + GI/Liver", "Pathoma: Renal y GI", "Revisar acid-base", "80 preguntas/día"]},
+    {"week": 10, "name": "Neuro + Psiquiatría",     "phase": "review",      "system": "neurology",     "emoji": "🧠", "daily": 80,
+     "activities": ["FA: Neurology + Psychiatry", "Sketchy: Psych meds", "Bloques mixtos completos", "80 preguntas/día"]},
+    {"week": 11, "name": "Simulación I",            "phase": "simulation",  "system": "mixed",         "emoji": "🎯", "daily": 80,
+     "activities": ["2 NBME Self-Assessments", "Bloques de 40 preguntas (60 min)", "Revisar TODAS las incorrectas", "Sin material nuevo"]},
+    {"week": 12, "name": "Simulación II + Cierre",  "phase": "simulation",  "system": "mixed",         "emoji": "🏁", "daily": 40,
+     "activities": ["FA completo (último repaso)", "Solo errores repetidos", "Dormir bien", "Descanso 3-5 días antes del examen"]},
+]
+
+SIX_WEEK_PLAN = [
+    {"week": 1,  "name": "Diagnóstico + Bioquímica", "phase": "diagnostic", "system": "biochemistry",  "emoji": "🔍", "daily": 60,
+     "activities": ["Diagnóstico inicial 40 Qs", "FA + Pathoma: Biochem/Physio", "60-80 preguntas/día"]},
+    {"week": 2,  "name": "Patología + Micro",        "phase": "systems",    "system": "pathology",     "emoji": "🔬", "daily": 80,
+     "activities": ["Pathoma: Pathology completo", "Sketchy Micro: bacterias/virus", "80 preguntas/día"]},
+    {"week": 3,  "name": "Farmacología + Cardio",    "phase": "systems",    "system": "pharmacology",  "emoji": "💊", "daily": 80,
+     "activities": ["Sketchy Pharm completo", "FA: Cardio + Pulmo", "80 preguntas/día"]},
+    {"week": 4,  "name": "Renal + GI + Neuro",      "phase": "systems",    "system": "nephrology",    "emoji": "🏥", "daily": 80,
+     "activities": ["FA: Renal, GI, Neuro", "Revisar incorrectas semanales", "80 preguntas/día"]},
+    {"week": 5,  "name": "Consolidación intensiva",  "phase": "review",     "system": "mixed",         "emoji": "💪", "daily": 80,
+     "activities": ["Revisar todos los temas débiles", "Bloques cronometrados 40 Qs", "NBME Free: 1 examen"]},
+    {"week": 6,  "name": "Simulación + Cierre",      "phase": "simulation", "system": "mixed",         "emoji": "🏁", "daily": 40,
+     "activities": ["2 NBME Self-Assessments", "FA: repaso final", "Descanso previo al examen"]},
+]
+
+PLAN_TEMPLATES = {
+    "12_week": TWELVE_WEEK_PLAN,
+    "6_week":  SIX_WEEK_PLAN,
+}
+
+
+def get_week_detail(plan_type: str, week: int) -> dict:
+    template = PLAN_TEMPLATES.get(plan_type, TWELVE_WEEK_PLAN)
+    week = max(1, min(week, len(template)))
+    return template[week - 1]
+
+
+# ── Funciones: usuarios ───────────────────────────────────────────────────────
+
+def create_user(username: str, password_hash: str, display_name: str = None) -> dict:
+    now = datetime.now().isoformat()
+    with engine.begin() as conn:
+        result = conn.execute(
+            users_tbl.insert().values(
+                username=username.lower().strip(),
+                password_hash=password_hash,
+                display_name=display_name or username,
+                created_at=now,
+            )
+        )
+        return {"id": result.inserted_primary_key[0], "username": username, "display_name": display_name or username}
+
+
+def get_user_by_username(username: str) -> dict | None:
+    with engine.connect() as conn:
+        row = conn.execute(
+            users_tbl.select().where(users_tbl.c.username == username.lower().strip())
+        ).fetchone()
+    if not row:
+        return None
+    return {"id": row.id, "username": row.username, "password_hash": row.password_hash, "display_name": row.display_name}
+
+
+def get_user_by_id(user_id: str) -> dict | None:
+    try:
+        uid = int(user_id)
+    except (ValueError, TypeError):
+        return None
+    with engine.connect() as conn:
+        row = conn.execute(users_tbl.select().where(users_tbl.c.id == uid)).fetchone()
+    if not row:
+        return None
+    return {"id": row.id, "username": row.username, "display_name": row.display_name}
+
+
+# ── Funciones: resultados ─────────────────────────────────────────────────────
 
 def save_result(user_id: str, question_id: str, topic: str, step: int, correct: bool) -> None:
     with engine.begin() as conn:
         conn.execute(results_tbl.insert().values(
-            user_id=user_id,
-            question_id=question_id,
-            topic=topic or "general",
-            step=step or 1,
-            correct=int(correct),
-            timestamp=datetime.now().isoformat(),
+            user_id=user_id, question_id=question_id, topic=topic or "general",
+            step=step or 1, correct=int(correct), timestamp=datetime.now().isoformat(),
         ))
 
 
@@ -84,7 +190,6 @@ def get_progress(user_id: str) -> dict:
              .group_by(results_tbl.c.step)
         ).fetchall()
 
-        # Questions answered today
         today = date.today().isoformat()
         today_row = conn.execute(
             sa.select(sa.func.count().label("total"))
@@ -102,142 +207,111 @@ def get_progress(user_id: str) -> dict:
         "overall_accuracy": round(correct / total * 100, 1) if total else 0.0,
         "answered_today":   today_row.total if today_row else 0,
         "by_topic": [
-            {
-                "topic":    r.topic,
-                "total":    r.total,
-                "correct":  int(r.correct or 0),
-                "accuracy": round(int(r.correct or 0) / r.total * 100, 1) if r.total else 0.0,
-            }
+            {"topic": r.topic, "total": r.total, "correct": int(r.correct or 0),
+             "accuracy": round(int(r.correct or 0) / r.total * 100, 1) if r.total else 0.0}
             for r in by_topic
         ],
         "by_step": [
-            {
-                "step":     r.step,
-                "total":    r.total,
-                "correct":  int(r.correct or 0),
-                "accuracy": round(int(r.correct or 0) / r.total * 100, 1) if r.total else 0.0,
-            }
+            {"step": r.step, "total": r.total, "correct": int(r.correct or 0),
+             "accuracy": round(int(r.correct or 0) / r.total * 100, 1) if r.total else 0.0}
             for r in by_step
         ],
     }
 
 
 def get_weakness_report(user_id: str, threshold: float = 60.0) -> dict:
-    """Returns systems with accuracy below threshold and today's progress."""
     progress = get_progress(user_id)
-    weak = [t for t in progress["by_topic"] if t["total"] >= 5 and t["accuracy"] < threshold]
+    weak   = sorted([t for t in progress["by_topic"] if t["total"] >= 5 and t["accuracy"] < threshold],
+                    key=lambda x: x["accuracy"])
     strong = [t for t in progress["by_topic"] if t["total"] >= 5 and t["accuracy"] >= threshold]
-    weak.sort(key=lambda x: x["accuracy"])
-
     return {
-        "weak_topics":    weak,
-        "strong_topics":  strong,
+        "weak_topics": weak, "strong_topics": strong,
         "overall_accuracy": progress["overall_accuracy"],
-        "total_answered": progress["total_answered"],
-        "answered_today": progress["answered_today"],
-        "threshold":      threshold,
+        "total_answered":   progress["total_answered"],
+        "answered_today":   progress["answered_today"],
+        "threshold": threshold,
     }
 
 
-# ── Study Plan ────────────────────────────────────────────────────────────────
-
-SYSTEM_ORDER = [
-    "cardiology", "pulmonology", "nephrology", "gastroenterology",
-    "hematology", "neurology", "psychiatry", "endocrinology",
-    "ob_gyn", "pharmacology", "microbiology", "pathology", "biostatistics",
-]
-
-SYSTEM_WEEKS = {
-    "cardiology": 2.0, "pulmonology": 1.5, "nephrology": 1.5,
-    "gastroenterology": 2.0, "hematology": 1.5, "neurology": 2.0,
-    "psychiatry": 1.0, "endocrinology": 1.5, "ob_gyn": 1.5,
-    "pharmacology": 1.5, "microbiology": 2.0, "pathology": 1.0,
-    "biostatistics": 0.5,
-}
-
+# ── Funciones: plan de estudio ────────────────────────────────────────────────
 
 def _weeks_until(target_date_str: str) -> float:
     try:
-        target = date.fromisoformat(target_date_str)
-        delta = (target - date.today()).days
-        return max(delta / 7, 0)
+        return max((date.fromisoformat(target_date_str) - date.today()).days / 7, 0)
     except Exception:
         return 20.0
 
 
-def set_study_plan(user_id: str, target_date: str, daily_goal: int = 40,
-                   current_system: str = "cardiology", current_phase: str = "diagnostic") -> dict:
+def set_study_plan(user_id: str, target_date: str, plan_type: str = "12_week",
+                   daily_questions: int = 60, language: str = "bilingual",
+                   current_week: int = 1) -> dict:
     now = datetime.now().isoformat()
+    week_detail = get_week_detail(plan_type, current_week)
+
     with engine.begin() as conn:
         existing = conn.execute(
-            sa.select(study_plans_tbl).where(study_plans_tbl.c.user_id == user_id)
+            study_plans_tbl.select().where(study_plans_tbl.c.user_id == user_id)
         ).fetchone()
 
+        values = dict(
+            target_date=target_date, plan_type=plan_type, daily_questions=daily_questions,
+            language=language, current_week=current_week,
+            current_system=week_detail.get("system", "mixed"),
+            current_phase=week_detail.get("phase", "diagnostic"),
+            updated_at=now,
+        )
         if existing:
-            conn.execute(
-                study_plans_tbl.update()
-                .where(study_plans_tbl.c.user_id == user_id)
-                .values(target_date=target_date, daily_goal=daily_goal,
-                        current_system=current_system, current_phase=current_phase,
-                        updated_at=now)
-            )
+            conn.execute(study_plans_tbl.update().where(study_plans_tbl.c.user_id == user_id).values(**values))
         else:
-            conn.execute(study_plans_tbl.insert().values(
-                user_id=user_id, target_date=target_date, daily_goal=daily_goal,
-                current_system=current_system, current_phase=current_phase,
-                created_at=now, updated_at=now,
-            ))
+            conn.execute(study_plans_tbl.insert().values(user_id=user_id, created_at=now, **values))
 
     return get_study_plan(user_id)
 
 
 def get_study_plan(user_id: str) -> dict:
     with engine.connect() as conn:
-        row = conn.execute(
-            sa.select(study_plans_tbl).where(study_plans_tbl.c.user_id == user_id)
-        ).fetchone()
+        row = conn.execute(study_plans_tbl.select().where(study_plans_tbl.c.user_id == user_id)).fetchone()
 
     if not row:
         return {"has_plan": False}
 
     weeks_left = _weeks_until(row.target_date) if row.target_date else None
-
-    # Build week-by-week schedule
-    schedule = []
-    if weeks_left:
-        week = 1
-        for sys in SYSTEM_ORDER:
-            w = SYSTEM_WEEKS.get(sys, 1.0)
-            schedule.append({
-                "week": f"{week}–{week + w - 0.5:.0f}".replace(".5", "½"),
-                "system": sys,
-                "weeks": w,
-            })
-            week += w
+    week_detail = get_week_detail(row.plan_type, row.current_week)
+    total_weeks = len(PLAN_TEMPLATES.get(row.plan_type, TWELVE_WEEK_PLAN))
 
     return {
-        "has_plan":       True,
-        "target_date":    row.target_date,
-        "daily_goal":     row.daily_goal,
-        "current_system": row.current_system,
-        "current_phase":  row.current_phase,
-        "weeks_left":     round(weeks_left, 1) if weeks_left else None,
-        "days_left":      int(weeks_left * 7) if weeks_left else None,
-        "schedule":       schedule,
-        "system_order":   SYSTEM_ORDER,
+        "has_plan":          True,
+        "target_date":       row.target_date,
+        "plan_type":         row.plan_type,
+        "daily_questions":   row.daily_questions,
+        "language":          row.language,
+        "current_week":      row.current_week,
+        "total_weeks":       total_weeks,
+        "current_system":    row.current_system,
+        "current_phase":     row.current_phase,
+        "weeks_left":        round(weeks_left, 1) if weeks_left else None,
+        "days_left":         int(weeks_left * 7) if weeks_left else None,
+        "current_week_detail": week_detail,
     }
 
 
-def update_study_phase(user_id: str, current_system: str = None,
-                       current_phase: str = None) -> dict:
+def update_study_phase(user_id: str, current_week: int = None,
+                       current_system: str = None, current_phase: str = None) -> dict:
     updates = {"updated_at": datetime.now().isoformat()}
+    if current_week is not None:
+        updates["current_week"] = current_week
+        # Auto-update system and phase from template
+        plan_row = None
+        with engine.connect() as conn:
+            plan_row = conn.execute(study_plans_tbl.select().where(study_plans_tbl.c.user_id == user_id)).fetchone()
+        if plan_row:
+            w = get_week_detail(plan_row.plan_type, current_week)
+            updates["current_system"] = w.get("system", "mixed")
+            updates["current_phase"]  = w.get("phase", "systems")
     if current_system: updates["current_system"] = current_system
     if current_phase:  updates["current_phase"]  = current_phase
 
     with engine.begin() as conn:
-        conn.execute(
-            study_plans_tbl.update()
-            .where(study_plans_tbl.c.user_id == user_id)
-            .values(**updates)
-        )
+        conn.execute(study_plans_tbl.update().where(study_plans_tbl.c.user_id == user_id).values(**updates))
+
     return get_study_plan(user_id)

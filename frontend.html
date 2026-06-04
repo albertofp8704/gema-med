@@ -1,710 +1,735 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>GEMA-MED — USMLE Tutor</title>
-  <script src="https://cdn.jsdelivr.net/npm/marked@9/marked.min.js"></script>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <style>
-    :root {
-      --sidebar-bg:   #0D2137;
-      --sidebar-text: #B8CDD9;
-      --accent:       #2563EB;
-      --accent-hover: #1D4ED8;
-      --success:      #16A34A;
-      --error:        #DC2626;
-      --chat-bg:      #F0F4F8;
-      --user-bg:      #2563EB;
-      --agent-bg:     #FFFFFF;
-      --border:       #DDE3EC;
-      --text:         #111827;
-      --muted:        #6B7280;
-      --radius:       12px;
-    }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      font-family: 'Inter', sans-serif;
-      background: var(--chat-bg);
-      display: flex;
-      height: 100vh;
-      overflow: hidden;
-      color: var(--text);
-    }
+<meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>GEMA-MED — USMLE Tutor</title>
+<script src="https://cdn.jsdelivr.net/npm/marked@9/marked.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --bg:#F0F4F8;--sidebar:#0D2137;--accent:#2563EB;--accent2:#1D4ED8;
+  --success:#16A34A;--error:#DC2626;--warn:#D97706;
+  --text:#111827;--muted:#6B7280;--border:#DDE3EC;
+  --card:#FFFFFF;--radius:12px;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);height:100vh;overflow:hidden;}
 
-    /* ── SIDEBAR ── */
-    #sidebar {
-      width: 230px;
-      min-width: 230px;
-      background: var(--sidebar-bg);
-      display: flex;
-      flex-direction: column;
-      padding: 20px 14px;
-      gap: 6px;
-      overflow-y: auto;
-    }
-    .logo {
-      font-size: 18px;
-      font-weight: 700;
-      color: #FFFFFF;
-      padding: 8px 6px 16px;
-      border-bottom: 1px solid #1E3A5A;
-      margin-bottom: 8px;
-      letter-spacing: -0.3px;
-    }
-    .logo span { color: #60A5FA; }
-    .section-label {
-      font-size: 10px;
-      font-weight: 600;
-      letter-spacing: 1.2px;
-      text-transform: uppercase;
-      color: #4B6A87;
-      margin: 12px 0 6px 4px;
-    }
-    .topic-btn {
-      background: transparent;
-      border: none;
-      color: var(--sidebar-text);
-      padding: 8px 10px;
-      border-radius: 8px;
-      cursor: pointer;
-      text-align: left;
-      font-size: 13px;
-      font-family: inherit;
-      transition: background 0.15s, color 0.15s;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    .topic-btn:hover, .topic-btn.active {
-      background: #1E3A5A;
-      color: #FFFFFF;
-    }
-    .topic-btn.active { color: #60A5FA; font-weight: 600; }
-    .step-group {
-      display: flex;
-      gap: 4px;
-      padding: 2px 4px;
-    }
-    .step-btn {
-      flex: 1;
-      background: #1A3352;
-      border: 1px solid #2A4A6A;
-      color: var(--sidebar-text);
-      padding: 6px 4px;
-      border-radius: 7px;
-      cursor: pointer;
-      font-size: 12px;
-      font-family: inherit;
-      text-align: center;
-      transition: all 0.15s;
-    }
-    .step-btn:hover, .step-btn.active {
-      background: var(--accent);
-      border-color: var(--accent);
-      color: #FFFFFF;
-      font-weight: 600;
-    }
+/* ── OVERLAYS ── */
+.overlay{position:fixed;inset:0;background:rgba(13,33,55,.85);display:flex;align-items:center;justify-content:center;z-index:100;backdrop-filter:blur(4px);}
+.overlay.hidden{display:none;}
+.card{background:var(--card);border-radius:20px;padding:36px;width:100%;max-width:420px;box-shadow:0 20px 60px rgba(0,0,0,.25);}
+.card h1{font-size:22px;font-weight:700;margin-bottom:4px;}
+.card .sub{font-size:13px;color:var(--muted);margin-bottom:24px;}
 
-    /* ── PROGRESS PANEL ── */
-    #progress-panel {
-      background: #0A1B2E;
-      border-radius: 10px;
-      padding: 12px;
-      margin-top: 4px;
-    }
-    .progress-stat {
-      display: flex;
-      justify-content: space-between;
-      font-size: 12px;
-      color: var(--sidebar-text);
-      padding: 3px 0;
-    }
-    .progress-stat strong { color: #FFFFFF; }
-    .progress-bar-wrap {
-      background: #1A3352;
-      border-radius: 4px;
-      height: 6px;
-      margin: 6px 0 10px;
-      overflow: hidden;
-    }
-    .progress-bar-fill {
-      height: 100%;
-      background: linear-gradient(90deg, #2563EB, #60A5FA);
-      border-radius: 4px;
-      transition: width 0.5s ease;
-    }
-    .progress-topic {
-      font-size: 11px;
-      color: #6B8FAD;
-      padding: 2px 0;
-      display: flex;
-      justify-content: space-between;
-    }
-    .progress-topic .acc {
-      color: #60A5FA;
-      font-weight: 600;
-    }
-    #reset-btn {
-      margin-top: auto;
-      padding-top: 16px;
-      background: transparent;
-      border: 1px solid #2A4A6A;
-      color: #6B8FAD;
-      border-radius: 8px;
-      padding: 9px;
-      cursor: pointer;
-      font-size: 12px;
-      font-family: inherit;
-      transition: all 0.15s;
-      width: 100%;
-      margin-top: 16px;
-    }
-    #reset-btn:hover { border-color: var(--error); color: #FCA5A5; }
+/* tabs */
+.tabs{display:flex;gap:4px;background:#F1F5F9;border-radius:10px;padding:4px;margin-bottom:20px;}
+.tab{flex:1;padding:8px;border:none;background:transparent;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;color:var(--muted);font-family:inherit;transition:all .15s;}
+.tab.active{background:var(--card);color:var(--accent);font-weight:600;box-shadow:0 1px 4px rgba(0,0,0,.1);}
 
-    /* ── MAIN CHAT ── */
-    #main {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-    }
-    #chat-header {
-      background: #FFFFFF;
-      border-bottom: 1px solid var(--border);
-      padding: 14px 20px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      flex-shrink: 0;
-    }
-    #chat-header h2 {
-      font-size: 15px;
-      font-weight: 600;
-      color: var(--text);
-    }
-    #session-badge {
-      font-size: 11px;
-      color: var(--muted);
-      font-family: monospace;
-      background: #F3F4F6;
-      padding: 3px 8px;
-      border-radius: 6px;
-    }
-    #messages {
-      flex: 1;
-      overflow-y: auto;
-      padding: 20px;
-      display: flex;
-      flex-direction: column;
-      gap: 14px;
-    }
-    .bubble-row {
-      display: flex;
-      align-items: flex-end;
-      gap: 8px;
-    }
-    .bubble-row.user { flex-direction: row-reverse; }
-    .avatar {
-      width: 30px;
-      height: 30px;
-      border-radius: 50%;
-      font-size: 14px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-    }
-    .avatar.agent { background: #DBEAFE; }
-    .avatar.user  { background: var(--accent); color: #FFF; }
-    .bubble {
-      max-width: 72%;
-      padding: 12px 16px;
-      border-radius: var(--radius);
-      font-size: 14px;
-      line-height: 1.6;
-      word-break: break-word;
-    }
-    .bubble.agent {
-      background: var(--agent-bg);
-      color: var(--text);
-      border-bottom-left-radius: 4px;
-      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
-    }
-    .bubble.user {
-      background: var(--user-bg);
-      color: #FFFFFF;
-      border-bottom-right-radius: 4px;
-    }
-    /* Markdown inside agent bubble */
-    .bubble.agent h1, .bubble.agent h2, .bubble.agent h3 {
-      font-size: 15px; font-weight: 700; margin: 12px 0 6px; color: #1E3A5F;
-    }
-    .bubble.agent p    { margin: 6px 0; }
-    .bubble.agent ul, .bubble.agent ol { padding-left: 18px; margin: 6px 0; }
-    .bubble.agent li   { margin: 3px 0; }
-    .bubble.agent hr   { border: none; border-top: 1px solid var(--border); margin: 10px 0; }
-    .bubble.agent code {
-      background: #F1F5F9; padding: 1px 5px; border-radius: 4px;
-      font-size: 12.5px; font-family: 'Courier New', monospace; color: #1E3A5F;
-    }
-    .bubble.agent pre  {
-      background: #F1F5F9; border-radius: 8px; padding: 10px 12px;
-      margin: 8px 0; overflow-x: auto; font-size: 12.5px;
-    }
-    .bubble.agent pre code { background: none; padding: 0; }
-    .bubble.agent strong { color: #1E3A5F; }
-    .bubble.agent table { border-collapse: collapse; width: 100%; margin: 8px 0; font-size: 13px; }
-    .bubble.agent th { background: #EFF6FF; padding: 6px 10px; text-align: left; border: 1px solid var(--border); }
-    .bubble.agent td { padding: 5px 10px; border: 1px solid var(--border); }
+/* fields */
+.field{margin-bottom:14px;}
+.field label{display:block;font-size:12px;font-weight:600;color:var(--muted);margin-bottom:5px;text-transform:uppercase;letter-spacing:.5px;}
+.field input,.field select{width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;font-family:inherit;outline:none;background:var(--card);transition:border .15s;}
+.field input:focus,.field select:focus{border-color:var(--accent);}
+.field select{cursor:pointer;}
 
-    /* Typing indicator */
-    .typing-dots { display: flex; gap: 5px; padding: 4px 2px; }
-    .typing-dots span {
-      width: 8px; height: 8px; background: #CBD5E1; border-radius: 50%;
-      animation: blink 1.2s infinite;
-    }
-    .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
-    .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
-    @keyframes blink {
-      0%, 80%, 100% { transform: scale(0.8); opacity: 0.5; }
-      40%           { transform: scale(1);   opacity: 1;   }
-    }
+/* buttons */
+.btn{width:100%;padding:11px;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .15s;}
+.btn-primary{background:var(--accent);color:#fff;}
+.btn-primary:hover{background:var(--accent2);}
+.btn-ghost{background:transparent;color:var(--muted);font-size:13px;margin-top:10px;}
+.btn-ghost:hover{color:var(--text);}
+.err-msg{color:var(--error);font-size:13px;margin-top:8px;text-align:center;min-height:18px;}
 
-    /* ── INPUT BAR ── */
-    #input-bar {
-      background: #FFFFFF;
-      border-top: 1px solid var(--border);
-      padding: 14px 20px;
-      display: flex;
-      gap: 10px;
-      align-items: flex-end;
-      flex-shrink: 0;
-    }
-    #input {
-      flex: 1;
-      border: 1.5px solid var(--border);
-      border-radius: 10px;
-      padding: 10px 14px;
-      font-size: 14px;
-      font-family: inherit;
-      resize: none;
-      outline: none;
-      max-height: 120px;
-      transition: border-color 0.15s;
-      line-height: 1.5;
-    }
-    #input:focus { border-color: var(--accent); }
-    #send-btn {
-      background: var(--accent);
-      color: #FFF;
-      border: none;
-      border-radius: 10px;
-      padding: 10px 18px;
-      font-size: 14px;
-      font-weight: 600;
-      font-family: inherit;
-      cursor: pointer;
-      transition: background 0.15s;
-      white-space: nowrap;
-    }
-    #send-btn:hover    { background: var(--accent-hover); }
-    #send-btn:disabled { background: #93C5FD; cursor: not-allowed; }
-    #filter-bar {
-      padding: 8px 20px 0;
-      display: flex;
-      gap: 6px;
-      flex-wrap: wrap;
-      background: #FFFFFF;
-    }
-    .filter-chip {
-      background: #EFF6FF;
-      color: var(--accent);
-      border: none;
-      border-radius: 20px;
-      padding: 4px 12px;
-      font-size: 12px;
-      font-family: inherit;
-      cursor: pointer;
-      transition: all 0.15s;
-      font-weight: 500;
-    }
-    .filter-chip:hover { background: #DBEAFE; }
-    .filter-chip.active { background: var(--accent); color: #FFF; }
-    #filter-label { font-size: 12px; color: var(--muted); display: flex; align-items: center; margin-right: 2px; }
+/* plan setup */
+.week-preview{background:#F8FAFC;border:1px solid var(--border);border-radius:10px;padding:14px;margin:14px 0;font-size:13px;}
+.week-preview h4{font-size:13px;font-weight:700;color:var(--accent);margin-bottom:8px;}
+.week-preview ul{list-style:none;padding:0;}
+.week-preview li{padding:3px 0;color:var(--muted);}
+.week-preview li::before{content:"→ ";color:var(--accent);}
+.phase-tag{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600;margin-bottom:8px;}
+.phase-diagnostic{background:#FEF3C7;color:#92400E;}
+.phase-systems{background:#DBEAFE;color:#1E40AF;}
+.phase-review{background:#D1FAE5;color:#065F46;}
+.phase-simulation{background:#EDE9FE;color:#5B21B6;}
 
-    /* Welcome message */
-    #welcome {
-      text-align: center;
-      padding: 40px 20px;
-      color: var(--muted);
-    }
-    #welcome h2 { font-size: 22px; color: #1E3A5F; margin-bottom: 8px; }
-    #welcome p  { font-size: 14px; margin: 6px 0; }
-    .quick-btn {
-      display: inline-block;
-      background: #EFF6FF;
-      color: var(--accent);
-      border: 1px solid #BFDBFE;
-      border-radius: 8px;
-      padding: 8px 14px;
-      margin: 5px;
-      cursor: pointer;
-      font-size: 13px;
-      transition: all 0.15s;
-    }
-    .quick-btn:hover { background: var(--accent); color: #FFF; border-color: var(--accent); }
+/* ── MAIN APP ── */
+#app{display:flex;height:100vh;overflow:hidden;}
+#app.hidden{display:none;}
 
-    /* Mobile */
-    @media (max-width: 640px) {
-      #sidebar { display: none; }
-      .bubble { max-width: 90%; }
-    }
-  </style>
+/* sidebar */
+#sidebar{width:230px;min-width:230px;background:var(--sidebar);display:flex;flex-direction:column;padding:0;overflow-y:auto;}
+.sb-header{padding:16px 14px 12px;border-bottom:1px solid #1E3A5A;display:flex;align-items:center;gap:10px;}
+.sb-logo{font-size:16px;font-weight:700;color:#fff;}
+.sb-logo span{color:#60A5FA;}
+.sb-avatar{width:32px;height:32px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0;}
+.sb-username{font-size:13px;color:#E2E8F0;font-weight:600;flex:1;truncate:ellipsis;}
+
+.sb-section{padding:12px 14px 4px;}
+.sb-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#4B6A87;margin-bottom:8px;}
+
+/* plan box */
+.plan-box{padding:4px 14px 12px;border-bottom:1px solid #1A3352;}
+.plan-title{font-size:13px;font-weight:700;color:#fff;margin-bottom:2px;}
+.plan-meta{font-size:11px;color:#6B8FAD;}
+.week-badge{display:inline-flex;align-items:center;gap:6px;margin-top:8px;background:#1A3352;border-radius:8px;padding:6px 10px;}
+.week-num{font-size:18px;font-weight:700;color:#60A5FA;}
+.week-info{font-size:11px;color:#94A3B8;}
+.week-name{font-size:12px;color:#CBD5E1;font-weight:600;}
+
+/* today box */
+.today-box{padding:10px 14px;border-bottom:1px solid #1A3352;}
+.today-label{font-size:11px;color:#6B8FAD;margin-bottom:6px;}
+.q-bar-wrap{background:#1A3352;border-radius:6px;height:8px;overflow:hidden;margin-bottom:4px;}
+.q-bar-fill{height:100%;background:linear-gradient(90deg,#2563EB,#60A5FA);border-radius:6px;transition:width .5s;}
+.q-count{font-size:11px;color:#94A3B8;display:flex;justify-content:space-between;}
+.q-count .done{color:#60A5FA;font-weight:600;}
+
+/* accuracy */
+.acc-box{padding:8px 14px;border-bottom:1px solid #1A3352;}
+.acc-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;}
+.acc-row span{font-size:11px;color:#6B8FAD;}
+.acc-val{font-size:13px;font-weight:700;}
+
+/* topics mini */
+.topics-mini{padding:8px 14px;flex:1;}
+.topic-item{display:flex;justify-content:space-between;align-items:center;padding:3px 0;font-size:11px;}
+.topic-name{color:#94A3B8;truncate:ellipsis;max-width:120px;}
+.topic-acc{font-weight:600;}
+.acc-good{color:#4ADE80;}
+.acc-mid{color:#FCD34D;}
+.acc-bad{color:#F87171;}
+
+/* sidebar actions */
+.sb-actions{padding:12px 14px;border-top:1px solid #1A3352;display:flex;flex-direction:column;gap:6px;margin-top:auto;}
+.sb-btn{background:transparent;border:1px solid #2A4A6A;color:#6B8FAD;border-radius:8px;padding:7px 10px;font-size:12px;cursor:pointer;font-family:inherit;text-align:left;transition:all .15s;display:flex;align-items:center;gap:6px;}
+.sb-btn:hover{border-color:var(--accent);color:#60A5FA;}
+.sb-btn.danger:hover{border-color:var(--error);color:#FCA5A5;}
+
+/* ── CHAT ── */
+#chat-main{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+#chat-header{background:var(--card);border-bottom:1px solid var(--border);padding:12px 20px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+#chat-header h2{font-size:14px;font-weight:600;}
+#chat-header p{font-size:12px;color:var(--muted);}
+.header-stats{display:flex;gap:8px;}
+.stat-chip{background:#F1F5F9;border-radius:20px;padding:4px 10px;font-size:11px;color:var(--muted);font-weight:500;}
+.stat-chip b{color:var(--accent);}
+
+#messages{flex:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:14px;background:var(--bg);}
+.bubble-row{display:flex;align-items:flex-end;gap:8px;}
+.bubble-row.user{flex-direction:row-reverse;}
+.avatar{width:30px;height:30px;border-radius:50%;font-size:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.avatar.agent{background:#DBEAFE;}
+.avatar.user{background:var(--accent);color:#fff;}
+.bubble{max-width:74%;padding:11px 16px;border-radius:var(--radius);font-size:14px;line-height:1.6;word-break:break-word;}
+.bubble.agent{background:var(--card);color:var(--text);border-bottom-left-radius:4px;box-shadow:0 1px 4px rgba(0,0,0,.07);}
+.bubble.user{background:var(--accent);color:#fff;border-bottom-right-radius:4px;}
+.bubble.agent h1,.bubble.agent h2,.bubble.agent h3{font-size:14px;font-weight:700;margin:10px 0 4px;color:#1E3A5F;}
+.bubble.agent p{margin:4px 0;}
+.bubble.agent ul,.bubble.agent ol{padding-left:16px;margin:4px 0;}
+.bubble.agent hr{border:none;border-top:1px solid var(--border);margin:8px 0;}
+.bubble.agent code{background:#F1F5F9;padding:1px 5px;border-radius:4px;font-size:12px;color:#1E3A5F;}
+.bubble.agent pre{background:#F1F5F9;border-radius:8px;padding:10px;margin:6px 0;overflow-x:auto;font-size:12px;}
+.bubble.agent strong{color:#1E3A5F;}
+.bubble.agent table{border-collapse:collapse;width:100%;font-size:12px;margin:6px 0;}
+.bubble.agent th{background:#EFF6FF;padding:5px 8px;border:1px solid var(--border);}
+.bubble.agent td{padding:4px 8px;border:1px solid var(--border);}
+
+@keyframes bd{0%,80%,100%{transform:scale(.7);opacity:.5}40%{transform:scale(1);opacity:1}}
+.dot{width:8px;height:8px;background:#CBD5E1;border-radius:50%;display:inline-block;}
+.d1{animation:bd 1.2s infinite 0ms}.d2{animation:bd 1.2s infinite 200ms}.d3{animation:bd 1.2s infinite 400ms}
+
+#input-bar{background:var(--card);border-top:1px solid var(--border);padding:12px 16px;display:flex;gap:10px;align-items:flex-end;flex-shrink:0;}
+#input{flex:1;border:1.5px solid var(--border);border-radius:10px;padding:10px 14px;font-size:14px;font-family:inherit;resize:none;outline:none;max-height:120px;line-height:1.5;transition:border .15s;}
+#input:focus{border-color:var(--accent);}
+#send-btn{background:var(--accent);color:#fff;border:none;border-radius:10px;padding:10px 16px;font-size:13px;font-weight:600;font-family:inherit;cursor:pointer;transition:background .15s;white-space:nowrap;flex-shrink:0;}
+#send-btn:hover{background:var(--accent2);}
+#send-btn:disabled{background:#93C5FD;cursor:not-allowed;}
+
+/* welcome */
+#welcome{text-align:center;padding:40px 20px;}
+#welcome h2{font-size:20px;font-weight:700;color:#1E3A5F;margin-bottom:6px;}
+#welcome p{font-size:13px;color:var(--muted);margin-bottom:16px;}
+.quick-btn{display:inline-block;background:#EFF6FF;color:var(--accent);border:1px solid #BFDBFE;border-radius:10px;padding:7px 13px;margin:4px;cursor:pointer;font-size:12px;transition:all .15s;}
+.quick-btn:hover{background:var(--accent);color:#fff;border-color:var(--accent);}
+
+::-webkit-scrollbar{width:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:#CBD5E1;border-radius:3px}
+</style>
 </head>
 <body>
 
-<!-- SIDEBAR -->
-<aside id="sidebar">
-  <div class="logo">🩺 <span>GEMA</span>-MED</div>
-
-  <div class="section-label">Tema</div>
-  <div id="topic-list"></div>
-
-  <div class="section-label">Step</div>
-  <div class="step-group" id="step-group"></div>
-
-  <div class="section-label">Progreso</div>
-  <div id="progress-panel"><p style="font-size:12px;color:#4B6A87">Aún no hay datos.</p></div>
-
-  <button id="reset-btn">↺ Nueva sesión</button>
-</aside>
-
-<!-- MAIN -->
-<main id="main">
-  <div id="chat-header">
-    <h2>Tutor USMLE — ECFMG / Reválida</h2>
-    <span id="session-badge">sin sesión</span>
+<!-- ── AUTH OVERLAY ── -->
+<div id="auth-overlay" class="overlay">
+  <div class="card">
+    <div style="text-align:center;margin-bottom:20px">
+      <div style="font-size:36px;margin-bottom:8px">🩺</div>
+      <h1>GEMA-MED</h1>
+      <p class="sub">Tutor IA para USMLE Step 1 / 2 CK / 3</p>
+    </div>
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('login')">Ingresar</button>
+      <button class="tab" onclick="switchTab('register')">Registro</button>
+    </div>
+    <!-- Login form -->
+    <div id="login-form">
+      <div class="field"><label>Usuario</label><input id="l-user" type="text" placeholder="tu usuario" autocomplete="username"/></div>
+      <div class="field"><label>Contraseña</label><input id="l-pass" type="password" placeholder="••••••" autocomplete="current-password"/></div>
+      <button class="btn btn-primary" onclick="doLogin()">Ingresar →</button>
+      <p class="err-msg" id="login-err"></p>
+    </div>
+    <!-- Register form -->
+    <div id="register-form" style="display:none">
+      <div class="field"><label>Nombre</label><input id="r-name" type="text" placeholder="Dr. García" autocomplete="name"/></div>
+      <div class="field"><label>Usuario</label><input id="r-user" type="text" placeholder="tu usuario único" autocomplete="username"/></div>
+      <div class="field"><label>Contraseña</label><input id="r-pass" type="password" placeholder="mínimo 6 caracteres" autocomplete="new-password"/></div>
+      <button class="btn btn-primary" onclick="doRegister()">Crear cuenta →</button>
+      <p class="err-msg" id="reg-err"></p>
+    </div>
+    <button class="btn btn-ghost" onclick="guestMode()">Continuar sin cuenta</button>
   </div>
+</div>
 
-  <div id="filter-bar">
-    <span id="filter-label">Filtro activo:</span>
-    <span id="active-filter" style="font-size:12px;color:#6B7280;padding:4px 0">Ninguno — preguntas mixtas</span>
-    <button class="filter-chip" id="clear-filter" style="display:none">✕ Limpiar</button>
-  </div>
+<!-- ── PLAN SETUP OVERLAY ── -->
+<div id="plan-overlay" class="overlay hidden">
+  <div class="card" style="max-width:480px">
+    <h1>Configura tu Plan</h1>
+    <p class="sub">Personaliza tu preparación para el USMLE Step 1</p>
 
-  <div id="messages">
-    <div id="welcome">
-      <h2>🩺 Bienvenido a GEMA-MED</h2>
-      <p>Tutor de IA para USMLE Step 1 / 2 CK / 3 y reválida de título médico.</p>
-      <p style="margin-top:16px;font-weight:600;color:#374151">Empieza con:</p>
-      <div style="margin-top:10px">
-        <span class="quick-btn" onclick="quickSend('Dame una pregunta de cardiology del Step 1')">🫀 Cardio Step 1</span>
-        <span class="quick-btn" onclick="quickSend('Dame una pregunta de neurology del Step 2')">🧠 Neuro Step 2</span>
-        <span class="quick-btn" onclick="quickSend('Dame una pregunta de pharmacology del Step 1')">💊 Farmaco Step 1</span>
-        <span class="quick-btn" onclick="quickSend('Dame una pregunta de microbiology')">🔬 Micro aleatorio</span>
-        <span class="quick-btn" onclick="quickSend('Explícame el proceso de ECFMG para graduados cubanos')">🇨🇺 ¿Cómo aplico a la Reválida?</span>
-        <span class="quick-btn" onclick="quickSend('¿Cuál es mi progreso?')">📊 Ver progreso</span>
+    <div class="field">
+      <label>📅 Fecha objetivo del examen</label>
+      <input id="p-date" type="date"/>
+    </div>
+    <div class="field">
+      <label>📚 Tipo de plan</label>
+      <select id="p-type" onchange="updateWeekOptions()">
+        <option value="12_week">12 semanas — Estándar ⭐</option>
+        <option value="6_week">6 semanas — Intensivo</option>
+      </select>
+    </div>
+    <div style="display:flex;gap:12px">
+      <div class="field" style="flex:1">
+        <label>📝 Preguntas / día</label>
+        <select id="p-qday">
+          <option value="40">40 (mínimo)</option>
+          <option value="60" selected>60 (moderado)</option>
+          <option value="80">80 (intensivo)</option>
+        </select>
+      </div>
+      <div class="field" style="flex:1">
+        <label>🌍 Idioma</label>
+        <select id="p-lang">
+          <option value="bilingual">Bilingüe ⭐</option>
+          <option value="es">Español</option>
+          <option value="en">English</option>
+        </select>
       </div>
     </div>
+    <div class="field">
+      <label>📍 Semana actual</label>
+      <select id="p-week" onchange="renderWeekPreview()"></select>
+    </div>
+    <div id="week-preview" class="week-preview"></div>
+    <button class="btn btn-primary" onclick="savePlan()">Guardar plan y empezar →</button>
+    <p class="err-msg" id="plan-err"></p>
   </div>
+</div>
 
-  <div id="input-bar">
-    <textarea id="input" rows="1" placeholder="Escribe tu respuesta (A/B/C/D/E) o haz una pregunta..."></textarea>
-    <button id="send-btn">Enviar ↵</button>
-  </div>
-</main>
+<!-- ── MAIN APP ── -->
+<div id="app" class="hidden">
+  <!-- Sidebar -->
+  <aside id="sidebar">
+    <div class="sb-header">
+      <div class="sb-logo">🩺 <span>GEMA</span>-MED</div>
+    </div>
+
+    <!-- User info -->
+    <div style="display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid #1A3352;">
+      <div class="sb-avatar" id="sb-avatar">G</div>
+      <div style="flex:1;min-width:0;">
+        <div id="sb-name" style="font-size:13px;font-weight:600;color:#E2E8F0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Usuario</div>
+        <div id="sb-username" style="font-size:11px;color:#6B8FAD;">@usuario</div>
+      </div>
+    </div>
+
+    <!-- Plan box -->
+    <div class="plan-box">
+      <div class="sb-label">Plan de estudio</div>
+      <div id="sb-plan-type" class="plan-title">–</div>
+      <div id="sb-target" class="plan-meta">–</div>
+      <div class="week-badge">
+        <div>
+          <div style="display:flex;align-items:baseline;gap:4px;">
+            <span class="week-num" id="sb-week">1</span>
+            <span class="week-info" id="sb-total-weeks">/ 12</span>
+          </div>
+          <div class="week-name" id="sb-week-name">Diagnóstico</div>
+        </div>
+        <div style="margin-left:auto;">
+          <span id="sb-phase-tag" class="phase-tag phase-diagnostic">Diagnóstico</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Today -->
+    <div class="today-box">
+      <div class="today-label">Hoy</div>
+      <div class="q-bar-wrap"><div class="q-bar-fill" id="q-bar" style="width:0%"></div></div>
+      <div class="q-count"><span class="done" id="q-done">0</span><span id="q-goal">/ 60 preguntas</span></div>
+    </div>
+
+    <!-- Accuracy -->
+    <div class="acc-box">
+      <div class="acc-row">
+        <span>Precisión global</span>
+        <span class="acc-val" id="sb-acc">–</span>
+      </div>
+      <div class="acc-row">
+        <span>Total respondidas</span>
+        <span style="font-size:12px;color:#94A3B8;" id="sb-total">0</span>
+      </div>
+    </div>
+
+    <!-- Topics mini -->
+    <div class="topics-mini">
+      <div class="sb-label">Por tema</div>
+      <div id="sb-topics"></div>
+    </div>
+
+    <!-- Actions -->
+    <div class="sb-actions">
+      <button class="sb-btn" onclick="quickSend('Quiero hacer mi diagnóstico inicial: 40 preguntas mixtas de todos los sistemas')">🔍 Diagnóstico inicial</button>
+      <button class="sb-btn" onclick="quickSend('Quiero hacer un simulacro de 40 preguntas mixtas cronometrado')">🎯 Simulacro</button>
+      <button class="sb-btn" onclick="quickSend('¿Cuáles son mis temas más débiles? Muestra el reporte de debilidades.')">💪 Ver debilidades</button>
+      <button class="sb-btn" onclick="showPlanEdit()">⚙️ Editar plan</button>
+      <button class="sb-btn danger" onclick="logout()">→ Cerrar sesión</button>
+    </div>
+  </aside>
+
+  <!-- Chat main -->
+  <main id="chat-main">
+    <div id="chat-header">
+      <div>
+        <h2 id="hdr-title">GEMA-MED — USMLE Tutor</h2>
+        <p id="hdr-sub">Selecciona un tema o escribe una pregunta</p>
+      </div>
+      <div class="header-stats">
+        <div class="stat-chip">Hoy: <b id="hdr-today">0</b> Qs</div>
+        <div class="stat-chip">Precisión: <b id="hdr-acc">–</b></div>
+      </div>
+    </div>
+
+    <div id="messages">
+      <div id="welcome">
+        <div style="font-size:40px;margin-bottom:10px">🩺</div>
+        <h2>¡Hola! Soy GEMA-MED</h2>
+        <p>Tu tutor IA para el USMLE. Empieza con una acción rápida o escribe directamente.</p>
+        <div style="margin-top:12px">
+          <span class="quick-btn" onclick="quickSend('Dame una pregunta de cardiology del Step 1')">🫀 Cardio Step 1</span>
+          <span class="quick-btn" onclick="quickSend('Dame una pregunta de pharmacology')">💊 Farmacología</span>
+          <span class="quick-btn" onclick="quickSend('Dame una pregunta de microbiology')">🔬 Microbiología</span>
+          <span class="quick-btn" onclick="quickSend('Dame una pregunta de neurology del Step 2')">🧠 Neuro Step 2</span>
+          <span class="quick-btn" onclick="quickSend('Explícame la ruta ECFMG completa para médicos cubanos')">🇨🇺 Ruta ECFMG</span>
+          <span class="quick-btn" onclick="quickSend('Muéstrame mi progreso y plan de estudio actual')">📊 Mi progreso</span>
+        </div>
+      </div>
+    </div>
+
+    <div id="input-bar">
+      <textarea id="input" rows="1" placeholder="Escribe tu respuesta (A/B/C/D) o una pregunta..."></textarea>
+      <button id="send-btn" onclick="sendFromInput()">Enviar ↵</button>
+    </div>
+  </main>
+</div>
 
 <script>
-  // ── CONFIG ──────────────────────────────────────────────────────────────
-  const API = window.location.origin;
+// ── CONFIG ────────────────────────────────────────────────────────────────────
+const API = window.location.origin;
 
-  const TOPICS = [
-    { emoji: '🫀', label: 'Cardiology',      code: 'cardiology'       },
-    { emoji: '🫁', label: 'Pulmonology',     code: 'pulmonology'      },
-    { emoji: '🧠', label: 'Neurology',       code: 'neurology'        },
-    { emoji: '🩸', label: 'Hematology',      code: 'hematology'       },
-    { emoji: '💊', label: 'Pharmacology',    code: 'pharmacology'     },
-    { emoji: '🔬', label: 'Microbiology',    code: 'microbiology'     },
-    { emoji: '🏥', label: 'Gastroenterology',code: 'gastroenterology' },
-    { emoji: '⚕️',  label: 'Nephrology',      code: 'nephrology'       },
-    { emoji: '🧬', label: 'Endocrinology',   code: 'endocrinology'    },
-    { emoji: '🔭', label: 'Pathology',       code: 'pathology'        },
-    { emoji: '🤰', label: 'OB/GYN',          code: 'ob_gyn'           },
-    { emoji: '👶', label: 'Pediatrics',      code: 'pediatrics'       },
-    { emoji: '🧘', label: 'Psychiatry',      code: 'psychiatry'       },
-    { emoji: '📊', label: 'Biostatistics',   code: 'biostatistics'    },
-  ];
+const WEEK_PLANS = {
+  "12_week": [
+    {week:1, name:"Base y diagnóstico",       phase:"diagnostic",  emoji:"🔍", daily:40,
+     activities:["Examen diagnóstico (40 Qs mixtas)","Definir calendario semanal","Organizar recursos (FA, Pathoma, Anki)","Empezar Anki top cards"]},
+    {week:2, name:"Bioquímica",               phase:"systems",     emoji:"⚗️", daily:60,
+     activities:["First Aid: Biochemistry","Pathoma: General Principles","Anki: Biochem deck","60 preguntas/día"]},
+    {week:3, name:"Fisiología",               phase:"systems",     emoji:"🫀", daily:60,
+     activities:["First Aid: Physiology systems","Sketchy: Cardio fisiología","60 preguntas/día"]},
+    {week:4, name:"Patología",                phase:"systems",     emoji:"🔬", daily:60,
+     activities:["Pathoma completo","First Aid: Pathology highlights","60 preguntas/día"]},
+    {week:5, name:"Microbiología",            phase:"systems",     emoji:"🦠", daily:60,
+     activities:["Sketchy Micro (bacterias, virus, hongos)","First Aid: Microbiology","60 preguntas/día"]},
+    {week:6, name:"Farmacología",             phase:"systems",     emoji:"💊", daily:60,
+     activities:["Sketchy Pharm (mecanismos)","First Aid: Pharmacology","60 preguntas/día"]},
+    {week:7, name:"Consolidación — Débiles",  phase:"review",      emoji:"💪", daily:80,
+     activities:["Revisar incorrectas semanas 2-6","Segundo pase temas débiles (<60%)","Mini bloques cronometrados 20 Qs","80 preguntas/día"]},
+    {week:8, name:"Cardio + Pulmo",           phase:"review",      emoji:"🫁", daily:80,
+     activities:["FA: Cardiovascular + Pulmonary","Sketchy Cardio repaso","80 preguntas/día"]},
+    {week:9, name:"Renal + GI",               phase:"review",      emoji:"🏥", daily:80,
+     activities:["FA: Renal + GI/Liver","Pathoma: Renal y GI","Revisar acid-base","80 preguntas/día"]},
+    {week:10,name:"Neuro + Psiquiatría",      phase:"review",      emoji:"🧠", daily:80,
+     activities:["FA: Neurology + Psychiatry","Sketchy: Psych meds","Bloques mixtos","80 preguntas/día"]},
+    {week:11,name:"Simulación I",             phase:"simulation",  emoji:"🎯", daily:80,
+     activities:["2 NBME Self-Assessments","Bloques de 40 (60 min)","Revisar TODAS las incorrectas"]},
+    {week:12,name:"Simulación II + Cierre",   phase:"simulation",  emoji:"🏁", daily:40,
+     activities:["FA completo: repaso final","Solo errores repetidos","Descanso 3-5 días antes"]},
+  ],
+  "6_week": [
+    {week:1, name:"Diagnóstico + Bioquímica", phase:"diagnostic",  emoji:"🔍", daily:60,
+     activities:["Diagnóstico 40 Qs","FA+Pathoma: Biochem/Physio","60-80 preguntas/día"]},
+    {week:2, name:"Patología + Micro",        phase:"systems",     emoji:"🔬", daily:80,
+     activities:["Pathoma completo","Sketchy Micro","80 preguntas/día"]},
+    {week:3, name:"Farmacología + Cardio",    phase:"systems",     emoji:"💊", daily:80,
+     activities:["Sketchy Pharm completo","FA: Cardio + Pulmo","80 preguntas/día"]},
+    {week:4, name:"Renal + GI + Neuro",       phase:"systems",     emoji:"🏥", daily:80,
+     activities:["FA: Renal, GI, Neuro","Revisar incorrectas","80 preguntas/día"]},
+    {week:5, name:"Consolidación intensiva",  phase:"review",      emoji:"💪", daily:80,
+     activities:["Segundo pase temas débiles","Bloques 40 Qs cronometrados","NBME Free: 1 examen"]},
+    {week:6, name:"Simulación + Cierre",      phase:"simulation",  emoji:"🏁", daily:40,
+     activities:["2 NBME Self-Assessments","FA repaso final","Descanso previo"]},
+  ],
+};
 
-  const STEPS = ['Step 1', 'Step 2', 'Step 3'];
+const PHASE_LABELS = {diagnostic:"Diagnóstico",systems:"Primer pase",review:"Consolidación",simulation:"Simulación",final:"Cierre"};
+const PHASE_CSS    = {diagnostic:"phase-diagnostic",systems:"phase-systems",review:"phase-review",simulation:"phase-simulation",final:"phase-simulation"};
 
-  // ── STATE ────────────────────────────────────────────────────────────────
-  let sessionId   = localStorage.getItem('gema_session') || null;
-  let activeTopic = null;
-  let activeStep  = null;
-  let isLoading   = false;
+// ── STATE ─────────────────────────────────────────────────────────────────────
+let token     = localStorage.getItem('gema_token') || null;
+let userState = null;
+let planState = null;
+let sessionId = localStorage.getItem('gema_session') || null;
+let loading   = false;
 
-  // ── INIT ─────────────────────────────────────────────────────────────────
-  document.addEventListener('DOMContentLoaded', () => {
-    renderTopics();
-    renderSteps();
-    if (sessionId) {
-      document.getElementById('session-badge').textContent = sessionId.slice(0, 8) + '…';
-      loadProgress();
-    }
-    document.getElementById('send-btn').addEventListener('click', sendFromInput);
-    document.getElementById('input').addEventListener('keydown', e => {
-      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendFromInput(); }
-    });
-    document.getElementById('input').addEventListener('input', autoResize);
-    document.getElementById('reset-btn').addEventListener('click', resetSession);
-    document.getElementById('clear-filter').addEventListener('click', clearFilter);
+// ── INIT ──────────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', async () => {
+  // Set min date for exam date picker
+  document.getElementById('p-date').min = new Date().toISOString().split('T')[0];
+  updateWeekOptions();
+
+  document.getElementById('input').addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendFromInput(); }
   });
+  document.getElementById('input').addEventListener('input', autoResize);
 
-  function renderTopics() {
-    const list = document.getElementById('topic-list');
-    TOPICS.forEach(t => {
-      const btn = document.createElement('button');
-      btn.className = 'topic-btn';
-      btn.dataset.code = t.code;
-      btn.textContent = `${t.emoji} ${t.label}`;
-      btn.addEventListener('click', () => toggleTopic(t.code, btn));
-      list.appendChild(btn);
-    });
+  if (token) {
+    await loadMe();
+  } else {
+    show('auth');
   }
+});
 
-  function renderSteps() {
-    const grp = document.getElementById('step-group');
-    STEPS.forEach((s, i) => {
-      const btn = document.createElement('button');
-      btn.className = 'step-btn';
-      btn.dataset.step = i + 1;
-      btn.textContent = s;
-      btn.addEventListener('click', () => toggleStep(i + 1, btn));
-      grp.appendChild(btn);
-    });
+async function loadMe() {
+  try {
+    const res = await apiFetch('/me');
+    userState = res.user;
+    planState = res.plan;
+    updateSidebar(res.plan, res.progress);
+    show(planState?.has_plan ? 'chat' : 'plan');
+  } catch {
+    localStorage.removeItem('gema_token');
+    token = null;
+    show('auth');
   }
+}
 
-  // ── FILTERS ──────────────────────────────────────────────────────────────
-  function toggleTopic(code, btn) {
-    if (activeTopic === code) { activeTopic = null; btn.classList.remove('active'); }
-    else {
-      document.querySelectorAll('.topic-btn').forEach(b => b.classList.remove('active'));
-      activeTopic = code;
-      btn.classList.add('active');
-    }
-    updateFilterBar();
-  }
+// ── SCREENS ───────────────────────────────────────────────────────────────────
+function show(screen) {
+  document.getElementById('auth-overlay').classList.toggle('hidden', screen !== 'auth');
+  document.getElementById('plan-overlay').classList.toggle('hidden', screen !== 'plan');
+  document.getElementById('app').classList.toggle('hidden', screen !== 'chat');
+  if (screen === 'plan') renderWeekPreview();
+}
 
-  function toggleStep(step, btn) {
-    if (activeStep === step) { activeStep = null; btn.classList.remove('active'); }
-    else {
-      document.querySelectorAll('.step-btn').forEach(b => b.classList.remove('active'));
-      activeStep = step;
-      btn.classList.add('active');
-    }
-    updateFilterBar();
-  }
+// ── AUTH ──────────────────────────────────────────────────────────────────────
+function switchTab(t) {
+  document.querySelectorAll('.tab').forEach((el,i)=>el.classList.toggle('active', (i===0&&t==='login')||(i===1&&t==='register')));
+  document.getElementById('login-form').style.display    = t==='login'    ? '' : 'none';
+  document.getElementById('register-form').style.display = t==='register' ? '' : 'none';
+}
 
-  function clearFilter() {
-    activeTopic = null; activeStep = null;
-    document.querySelectorAll('.topic-btn, .step-btn').forEach(b => b.classList.remove('active'));
-    updateFilterBar();
-  }
-
-  function updateFilterBar() {
-    const label = document.getElementById('active-filter');
-    const clearBtn = document.getElementById('clear-filter');
-    const parts = [];
-    if (activeTopic) parts.push(activeTopic);
-    if (activeStep)  parts.push(`Step ${activeStep}`);
-    if (parts.length) {
-      label.textContent = parts.join(' + ');
-      label.style.color = '#2563EB';
-      clearBtn.style.display = 'inline-block';
+async function doLogin() {
+  const user = document.getElementById('l-user').value.trim();
+  const pass = document.getElementById('l-pass').value;
+  const err  = document.getElementById('login-err');
+  err.textContent = '';
+  if (!user || !pass) { err.textContent='Completa todos los campos'; return; }
+  try {
+    const res = await apiFetch('/auth/login', {method:'POST', body:{username:user, password:pass}});
+    token = res.token;
+    localStorage.setItem('gema_token', token);
+    userState = res.user;
+    if (res.has_plan) {
+      await loadMe();
     } else {
-      label.textContent = 'Ninguno — preguntas mixtas';
-      label.style.color = '#6B7280';
-      clearBtn.style.display = 'none';
+      show('plan');
     }
+  } catch(e) {
+    err.textContent = e.message || 'Error al ingresar';
   }
+}
 
-  // ── SEND ─────────────────────────────────────────────────────────────────
-  function sendFromInput() {
-    const input = document.getElementById('input');
-    const text  = input.value.trim();
-    if (!text || isLoading) return;
-    input.value = '';
-    input.style.height = 'auto';
-    sendMessage(text);
+async function doRegister() {
+  const name = document.getElementById('r-name').value.trim();
+  const user = document.getElementById('r-user').value.trim();
+  const pass = document.getElementById('r-pass').value;
+  const err  = document.getElementById('reg-err');
+  err.textContent = '';
+  if (!user || !pass) { err.textContent='Completa usuario y contraseña'; return; }
+  try {
+    const res = await apiFetch('/auth/register', {method:'POST', body:{username:user, password:pass, display_name:name}});
+    token = res.token;
+    localStorage.setItem('gema_token', token);
+    userState = res.user;
+    show('plan');
+  } catch(e) {
+    err.textContent = e.message || 'Error al registrar';
   }
+}
 
-  function quickSend(text) {
-    document.getElementById('welcome').remove();
-    sendMessage(text);
+function guestMode() {
+  userState = {username:'guest', display_name:'Invitado'};
+  token = null;
+  show('chat');
+  updateSidebar(null, null);
+}
+
+function logout() {
+  localStorage.removeItem('gema_token');
+  localStorage.removeItem('gema_session');
+  token = null; userState = null; planState = null; sessionId = null;
+  document.getElementById('messages').innerHTML = '<div id="welcome">...</div>';
+  show('auth');
+  location.reload();
+}
+
+// ── PLAN SETUP ────────────────────────────────────────────────────────────────
+function updateWeekOptions() {
+  const type   = document.getElementById('p-type').value;
+  const weeks  = WEEK_PLANS[type] || WEEK_PLANS['12_week'];
+  const select = document.getElementById('p-week');
+  select.innerHTML = weeks.map(w =>
+    `<option value="${w.week}">Semana ${w.week} — ${w.emoji} ${w.name}</option>`
+  ).join('');
+  renderWeekPreview();
+}
+
+function renderWeekPreview() {
+  const type = document.getElementById('p-type').value;
+  const week = parseInt(document.getElementById('p-week').value) || 1;
+  const plan = WEEK_PLANS[type] || WEEK_PLANS['12_week'];
+  const w    = plan.find(x=>x.week===week) || plan[0];
+  const phaseLabel = PHASE_LABELS[w.phase] || w.phase;
+  const phaseClass = PHASE_CSS[w.phase]   || 'phase-diagnostic';
+  document.getElementById('week-preview').innerHTML = `
+    <h4>${w.emoji} Semana ${w.week}: ${w.name}</h4>
+    <span class="phase-tag ${phaseClass}">${phaseLabel}</span>
+    <p style="font-size:11px;color:#6B7280;margin-bottom:8px">Meta: ${w.daily} preguntas/día</p>
+    <ul>${w.activities.map(a=>`<li>${a}</li>`).join('')}</ul>
+  `;
+}
+
+async function savePlan() {
+  const err  = document.getElementById('plan-err');
+  err.textContent = '';
+  const dateVal = document.getElementById('p-date').value;
+  if (!dateVal) { err.textContent='Selecciona la fecha del examen'; return; }
+  const body = {
+    target_date:     dateVal,
+    plan_type:       document.getElementById('p-type').value,
+    daily_questions: parseInt(document.getElementById('p-qday').value),
+    language:        document.getElementById('p-lang').value,
+    current_week:    parseInt(document.getElementById('p-week').value),
+  };
+  try {
+    planState = await apiFetch('/me/plan', {method:'POST', body});
+    const me  = await apiFetch('/me');
+    updateSidebar(me.plan, me.progress);
+    show('chat');
+  } catch(e) {
+    err.textContent = e.message || 'Error guardando plan';
   }
+}
 
-  function buildMessage(userText) {
-    // If user types a single letter (answer), send as-is
-    if (/^[abcdeABCDE]$/.test(userText.trim())) return userText;
-    // If no filter, send text verbatim
-    if (!activeTopic && !activeStep) return userText;
-    // If text is just "dame una pregunta" style, append filters
-    const lower = userText.toLowerCase();
-    const isQuestion = ['dame', 'pregunta', 'otra', 'question', 'next', 'siguiente'].some(w => lower.includes(w));
-    if (isQuestion) {
-      let msg = 'Dame una pregunta';
-      if (activeTopic) msg += ` de ${activeTopic}`;
-      if (activeStep)  msg += ` del Step ${activeStep}`;
-      return msg;
-    }
-    return userText;
+function showPlanEdit() {
+  if (planState?.has_plan) {
+    document.getElementById('p-date').value  = planState.target_date || '';
+    document.getElementById('p-type').value  = planState.plan_type   || '12_week';
+    document.getElementById('p-qday').value  = String(planState.daily_questions || 60);
+    document.getElementById('p-lang').value  = planState.language    || 'bilingual';
+    updateWeekOptions();
+    document.getElementById('p-week').value  = String(planState.current_week || 1);
+    renderWeekPreview();
   }
+  show('plan');
+}
 
-  async function sendMessage(text) {
-    const welcome = document.getElementById('welcome');
-    if (welcome) welcome.remove();
+// ── SIDEBAR ───────────────────────────────────────────────────────────────────
+function updateSidebar(plan, progress) {
+  // User
+  const name = userState?.display_name || userState?.username || 'Usuario';
+  document.getElementById('sb-name').textContent    = name;
+  document.getElementById('sb-username').textContent = `@${userState?.username||'invitado'}`;
+  document.getElementById('sb-avatar').textContent  = name[0].toUpperCase();
 
-    const msgToSend = buildMessage(text);
-    addBubble(text, 'user');   // show original text in UI
-    isLoading = true;
-    document.getElementById('send-btn').disabled = true;
+  if (!plan?.has_plan) return;
 
-    const typingId = addTyping();
+  const type    = plan.plan_type || '12_week';
+  const week    = plan.current_week || 1;
+  const weeks   = WEEK_PLANS[type] || WEEK_PLANS['12_week'];
+  const wDetail = weeks.find(w=>w.week===week) || weeks[0];
+  const phase   = wDetail?.phase || 'diagnostic';
+  const total   = weeks.length;
 
-    try {
-      const body = { message: msgToSend };
-      if (sessionId) body.session_id = sessionId;
+  document.getElementById('sb-plan-type').textContent = type==='12_week'?'12 semanas — Estándar':'6 semanas — Intensivo';
+  document.getElementById('sb-target').textContent    = plan.target_date
+    ? `📅 ${plan.target_date} · ${plan.days_left||'?'} días restantes` : '📅 Sin fecha';
+  document.getElementById('sb-week').textContent      = week;
+  document.getElementById('sb-total-weeks').textContent = `/ ${total}`;
+  document.getElementById('sb-week-name').textContent = `${wDetail?.emoji||''} ${wDetail?.name||'–'}`;
 
-      const res  = await fetch(`${API}/chat`, {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify(body),
-      });
+  const ptag = document.getElementById('sb-phase-tag');
+  ptag.textContent = PHASE_LABELS[phase] || phase;
+  ptag.className   = `phase-tag ${PHASE_CSS[phase]||'phase-diagnostic'}`;
 
-      if (!res.ok) throw new Error(`Server error ${res.status}`);
-      const data = await res.json();
+  // Header
+  document.getElementById('hdr-title').textContent = `Semana ${week}/${total} — ${wDetail?.name||''}`;
+  document.getElementById('hdr-sub').textContent   = PHASE_LABELS[phase]||phase;
 
-      sessionId = data.session_id;
-      localStorage.setItem('gema_session', sessionId);
-      document.getElementById('session-badge').textContent = sessionId.slice(0, 8) + '…';
+  // Progress
+  if (progress) {
+    const goal    = plan.daily_questions || 60;
+    const done    = progress.answered_today || 0;
+    const acc     = progress.overall_accuracy;
+    const total_q = progress.total_answered;
+    const pct     = Math.min(Math.round(done/goal*100), 100);
 
-      removeTyping(typingId);
-      addBubble(data.response, 'agent');
-      loadProgress();
+    document.getElementById('q-bar').style.width     = pct+'%';
+    document.getElementById('q-done').textContent    = done;
+    document.getElementById('q-goal').textContent    = `/ ${goal} preguntas`;
+    document.getElementById('hdr-today').textContent = done;
+    document.getElementById('hdr-acc').textContent   = acc ? acc+'%' : '–';
 
-    } catch (err) {
-      removeTyping(typingId);
-      addBubble(`❌ Error: ${err.message}. ¿Está corriendo el servidor en ${API}?`, 'agent');
-    } finally {
-      isLoading = false;
-      document.getElementById('send-btn').disabled = false;
-    }
+    const accColor = acc>=70?'#22C55E':acc>=50?'#F59E0B':'#EF4444';
+    document.getElementById('sb-acc').textContent  = acc ? acc+'%' : '–';
+    document.getElementById('sb-acc').style.color  = acc ? accColor : '#94A3B8';
+    document.getElementById('sb-total').textContent = `${total_q} preguntas`;
+
+    // Topics
+    const topics = (progress.by_topic||[]).slice(0,6);
+    document.getElementById('sb-topics').innerHTML = topics.map(t=>{
+      const cls = t.accuracy>=70?'acc-good':t.accuracy>=50?'acc-mid':'acc-bad';
+      return `<div class="topic-item"><span class="topic-name">${t.topic}</span><span class="topic-acc ${cls}">${t.accuracy}%</span></div>`;
+    }).join('') || '<p style="font-size:11px;color:#4B6A87">Sin datos aún</p>';
   }
+}
 
-  // ── BUBBLES ───────────────────────────────────────────────────────────────
-  function addBubble(text, role) {
-    const messages = document.getElementById('messages');
-    const row = document.createElement('div');
-    row.className = `bubble-row ${role}`;
+async function refreshProgress() {
+  if (!token) return;
+  try {
+    const res = await apiFetch('/me');
+    updateSidebar(res.plan, res.progress);
+  } catch {}
+}
 
-    const avatar = document.createElement('div');
-    avatar.className = `avatar ${role}`;
-    avatar.textContent = role === 'agent' ? '🩺' : '👤';
+// ── CHAT ──────────────────────────────────────────────────────────────────────
+function sendFromInput() {
+  const el = document.getElementById('input');
+  const txt = el.value.trim();
+  if (!txt || loading) return;
+  el.value = '';
+  el.style.height = 'auto';
+  sendMessage(txt);
+}
 
-    const bubble = document.createElement('div');
-    bubble.className = `bubble ${role}`;
-    if (role === 'agent') {
-      bubble.innerHTML = marked.parse(text);
-    } else {
-      bubble.textContent = text;
-    }
+function quickSend(txt) {
+  const welcome = document.getElementById('welcome');
+  if (welcome) welcome.remove();
+  sendMessage(txt);
+}
 
-    row.appendChild(avatar);
-    row.appendChild(bubble);
-    messages.appendChild(row);
-    messages.scrollTop = messages.scrollHeight;
+async function sendMessage(text) {
+  const welcome = document.getElementById('welcome');
+  if (welcome) welcome.remove();
+
+  addBubble(text, 'user');
+  loading = true;
+  document.getElementById('send-btn').disabled = true;
+  const tid = addTyping();
+
+  try {
+    const body = {message: text};
+    if (sessionId) body.session_id = sessionId;
+
+    const res = await apiFetch('/chat', {method:'POST', body});
+    sessionId = res.session_id;
+    localStorage.setItem('gema_session', sessionId);
+    removeTyping(tid);
+    addBubble(res.response, 'agent');
+    await refreshProgress();
+  } catch(e) {
+    removeTyping(tid);
+    addBubble(`❌ Error: ${e.message}`, 'agent');
+  } finally {
+    loading = false;
+    document.getElementById('send-btn').disabled = false;
+    document.getElementById('input').focus();
   }
+}
 
-  function addTyping() {
-    const messages = document.getElementById('messages');
-    const id = 'typing-' + Date.now();
-    const row = document.createElement('div');
-    row.className = 'bubble-row agent';
-    row.id = id;
-    row.innerHTML = `
-      <div class="avatar agent">🩺</div>
-      <div class="bubble agent"><div class="typing-dots"><span></span><span></span><span></span></div></div>`;
-    messages.appendChild(row);
-    messages.scrollTop = messages.scrollHeight;
-    return id;
-  }
+function addBubble(text, role) {
+  const msgs = document.getElementById('messages');
+  const row  = document.createElement('div');
+  row.className = `bubble-row ${role}`;
+  const av = document.createElement('div');
+  av.className = `avatar ${role}`;
+  av.textContent = role==='agent'?'🩺':'👤';
+  const bub = document.createElement('div');
+  bub.className = `bubble ${role}`;
+  if (role==='agent') bub.innerHTML = marked.parse(text);
+  else bub.textContent = text;
+  row.appendChild(av);
+  row.appendChild(bub);
+  msgs.appendChild(row);
+  msgs.scrollTop = msgs.scrollHeight;
+}
 
-  function removeTyping(id) {
-    const el = document.getElementById(id);
-    if (el) el.remove();
-  }
+function addTyping() {
+  const msgs = document.getElementById('messages');
+  const id   = 'typ-'+Date.now();
+  const row  = document.createElement('div');
+  row.className = 'bubble-row agent';
+  row.id = id;
+  row.innerHTML = `<div class="avatar agent">🩺</div><div class="bubble agent"><span class="dot d1"></span> <span class="dot d2"></span> <span class="dot d3"></span></div>`;
+  msgs.appendChild(row);
+  msgs.scrollTop = msgs.scrollHeight;
+  return id;
+}
 
-  // ── PROGRESS ─────────────────────────────────────────────────────────────
-  async function loadProgress() {
-    if (!sessionId) return;
-    try {
-      const res  = await fetch(`${API}/progress/${sessionId}`);
-      const data = await res.json();
-      renderProgress(data);
-    } catch (_) {}
-  }
+function removeTyping(id) {
+  const el = document.getElementById(id);
+  if (el) el.remove();
+}
 
-  function renderProgress(data) {
-    const panel = document.getElementById('progress-panel');
-    if (!data.total_answered) {
-      panel.innerHTML = '<p style="font-size:12px;color:#4B6A87">Sin datos aún.</p>';
-      return;
-    }
-    const pct = data.overall_accuracy;
-    const color = pct >= 70 ? '#22C55E' : pct >= 50 ? '#F59E0B' : '#EF4444';
+function autoResize() {
+  const el = document.getElementById('input');
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 128)+'px';
+}
 
-    let topicsHtml = '';
-    (data.by_topic || []).slice(0, 5).forEach(t => {
-      topicsHtml += `<div class="progress-topic"><span>${t.topic}</span><span class="acc">${t.accuracy}%</span></div>`;
-    });
-
-    panel.innerHTML = `
-      <div class="progress-stat">
-        <span>Preguntas</span>
-        <strong>${data.total_correct}/${data.total_answered}</strong>
-      </div>
-      <div class="progress-stat">
-        <span>Precisión</span>
-        <strong style="color:${color}">${pct}%</strong>
-      </div>
-      <div class="progress-bar-wrap">
-        <div class="progress-bar-fill" style="width:${pct}%"></div>
-      </div>
-      ${topicsHtml}
-    `;
-  }
-
-  // ── UTILS ─────────────────────────────────────────────────────────────────
-  function autoResize() {
-    const el = document.getElementById('input');
-    el.style.height = 'auto';
-    el.style.height = Math.min(el.scrollHeight, 120) + 'px';
-  }
-
-  async function resetSession() {
-    if (!confirm('¿Reiniciar sesión? Se perderá el historial de chat (el progreso en DB se mantiene).')) return;
-    if (sessionId) {
-      await fetch(`${API}/session/${sessionId}`, { method: 'DELETE' }).catch(() => {});
-    }
-    localStorage.removeItem('gema_session');
-    sessionId = null;
-    document.getElementById('messages').innerHTML = '';
-    document.getElementById('session-badge').textContent = 'sin sesión';
-    document.getElementById('progress-panel').innerHTML = '<p style="font-size:12px;color:#4B6A87">Sin datos aún.</p>';
-    clearFilter();
-  }
+// ── API HELPER ────────────────────────────────────────────────────────────────
+async function apiFetch(path, opts={}) {
+  const headers = {'Content-Type':'application/json'};
+  if (token) headers['Authorization'] = 'Bearer '+token;
+  const res = await fetch(API+path, {
+    method: opts.method||'GET',
+    headers,
+    body: opts.body ? JSON.stringify(opts.body) : undefined,
+  });
+  const data = await res.json().catch(()=>({}));
+  if (!res.ok) throw new Error(data.detail || `Error ${res.status}`);
+  return data;
+}
 </script>
 </body>
 </html>

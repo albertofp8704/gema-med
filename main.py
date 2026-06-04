@@ -1,6 +1,6 @@
 """
 GEMA-MED — USMLE Study Agent
-FastAPI backend: Claude agent + Telegram bot + web frontend
+FastAPI: auth propio + agente Claude/Groq + Telegram bot
 
 Run:  python main.py
 Web:  http://localhost:8000
@@ -15,28 +15,32 @@ from pathlib import Path
 
 import uvicorn
 from dotenv import load_dotenv
-from fastapi import Depends, FastAPI
+from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
 load_dotenv()
 
-from auth import get_current_user
-from db import init_db, get_progress
+from auth import (
+    hash_password, verify_password, create_token,
+    get_current_user, get_optional_user,
+)
+from db import (
+    init_db, get_progress, get_weakness_report,
+    create_user, get_user_by_username, get_user_by_id,
+    set_study_plan, get_study_plan, update_study_phase,
+    get_week_detail, PLAN_TEMPLATES,
+)
 from agent import run_agent
 
-# ── In-memory conversation store (session_id → message history) ──────────────
-# For multi-user prod, replace with Redis. Fine for 50 users.
 sessions: dict[str, list] = defaultdict(list)
-
 FRONTEND = Path(__file__).parent / "frontend.html"
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_db()
-
     telegram_started = False
     if os.getenv("TELEGRAM_TOKEN"):
         try:
@@ -44,12 +48,11 @@ async def lifespan(app: FastAPI):
             await start_telegram_bot()
             telegram_started = True
         except ImportError:
-            print("python-telegram-bot not installed — skipping")
+            pass
 
-    channels = ["Web UI (http://localhost:8000)", "REST API (/docs)"]
-    if telegram_started:
-        channels.append("Telegram Bot")
-    print(f"✅ GEMA-MED ready — {', '.join(channels)}")
+    channels = ["Web (http://localhost:8000)", "REST API (/docs)"]
+    if telegram_started: channels.append("Telegram")
+    print(f"✅ GEMA-MED listo — {', '.join(channels)}")
     yield
 
     if telegram_started:
@@ -58,75 +61,124 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="GEMA-MED USMLE Tutor",
-    description="AI agent for USMLE Step 1/2/3 + ECFMG. Claude + MedQA + PubMed.",
-    version="1.1.0",
+    title="GEMA-MED — USMLE Tutor",
+    description="Agente IA para USMLE Step 1/2/3 con plan de estudio estructurado.",
+    version="2.0.0",
     lifespan=lifespan,
 )
 
 app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],   # tighten to Vercel domain in prod
-    allow_methods=["*"],
-    allow_headers=["*"],
+    CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"],
 )
 
 
-# ── Models ────────────────────────────────────────────────────────────────────
+# ── Modelos Pydantic ──────────────────────────────────────────────────────────
+
+class RegisterRequest(BaseModel):
+    username: str
+    password: str
+    display_name: str | None = None
+
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+
+class PlanRequest(BaseModel):
+    target_date:     str          # YYYY-MM-DD
+    plan_type:       str = "12_week"
+    daily_questions: int = 60
+    language:        str = "bilingual"
+    current_week:    int = 1
 
 class ChatRequest(BaseModel):
     session_id: str | None = None
     message: str
 
-    model_config = {"json_schema_extra": {"examples": [
-        {"message": "Dame una pregunta de cardiology del Step 2"},
-        {"session_id": "abc123", "message": "B"},
-    ]}}
+
+# ── Auth endpoints ────────────────────────────────────────────────────────────
+
+@app.post("/auth/register", tags=["auth"])
+async def register(req: RegisterRequest):
+    username = req.username.lower().strip()
+    if len(username) < 3:
+        raise HTTPException(400, "Username debe tener al menos 3 caracteres")
+    if len(req.password) < 6:
+        raise HTTPException(400, "Password debe tener al menos 6 caracteres")
+    if get_user_by_username(username):
+        raise HTTPException(409, "Username ya existe")
+
+    pw_hash = hash_password(req.password)
+    user = create_user(username, pw_hash, req.display_name)
+    token = create_token(user["id"], user["username"], user["display_name"])
+    return {"token": token, "user": user, "has_plan": False}
 
 
-class ChatResponse(BaseModel):
-    session_id: str
-    response: str
-    messages_in_session: int
+@app.post("/auth/login", tags=["auth"])
+async def login(req: LoginRequest):
+    user = get_user_by_username(req.username)
+    if not user or not verify_password(req.password, user["password_hash"]):
+        raise HTTPException(401, "Usuario o contraseña incorrectos")
+
+    token = create_token(user["id"], user["username"], user.get("display_name", ""))
+    plan  = get_study_plan(str(user["id"]))
+    return {"token": token, "user": {"id": user["id"], "username": user["username"],
+            "display_name": user.get("display_name")}, "has_plan": plan.get("has_plan", False)}
 
 
-# ── Endpoints ─────────────────────────────────────────────────────────────────
+# ── Me endpoints ──────────────────────────────────────────────────────────────
 
-@app.get("/", include_in_schema=False)
-def frontend():
-    """Serve the plain HTML fallback UI (no auth, for quick testing)."""
-    return FileResponse(FRONTEND)
+@app.get("/me", tags=["me"])
+async def me(user = Depends(get_current_user)):
+    profile  = get_user_by_id(user["user_id"])
+    plan     = get_study_plan(user["user_id"])
+    progress = get_progress(user["user_id"])
+    return {"user": profile, "plan": plan, "progress": progress}
 
 
-@app.get("/health")
-def health():
+@app.post("/me/plan", tags=["me"])
+async def save_my_plan(req: PlanRequest, user = Depends(get_current_user)):
+    plan = set_study_plan(
+        user_id=user["user_id"],
+        target_date=req.target_date,
+        plan_type=req.plan_type,
+        daily_questions=req.daily_questions,
+        language=req.language,
+        current_week=req.current_week,
+    )
+    return plan
+
+
+@app.patch("/me/plan/week", tags=["me"])
+async def advance_week(week: int, user = Depends(get_current_user)):
+    return update_study_phase(user["user_id"], current_week=week)
+
+
+@app.get("/me/progress", tags=["me"])
+async def my_progress(user = Depends(get_current_user)):
     return {
-        "status":   "ok",
-        "agent":    "GEMA-MED",
-        "model":    os.getenv("LLM_MODEL", "llama-3.3-70b-versatile"),
-        "llm":      "groq" if "groq" in os.getenv("LLM_BASE_URL", "groq") else "custom",
-        "telegram": bool(os.getenv("TELEGRAM_TOKEN")),
-        "auth":     bool(os.getenv("CLERK_DOMAIN")),
-        "db":       "postgresql" if os.getenv("DATABASE_URL") else "sqlite",
+        "progress": get_progress(user["user_id"]),
+        "weakness": get_weakness_report(user["user_id"]),
+        "plan":     get_study_plan(user["user_id"]),
     }
 
 
-@app.post("/chat", response_model=ChatResponse)
-async def chat(
-    req: ChatRequest,
-    user_id: str = Depends(get_current_user),
-):
-    """
-    Main chat endpoint. Auth-aware:
-    - Web (Clerk): user_id = Clerk sub, used as session prefix → web_{user_id}
-    - Telegram: calls run_agent() directly, bypasses this endpoint
-    - Dev (no Clerk): user_id = "dev_user"
-    """
-    # Web sessions are prefixed so they don't collide with Telegram sessions
-    if user_id == "dev_user":
-        session_id = req.session_id or str(uuid.uuid4())
-    else:
-        session_id = req.session_id or f"web_{user_id}"
+# ── Plan templates (público — para el formulario del frontend) ────────────────
+
+@app.get("/plan-templates", tags=["plans"])
+def plan_templates():
+    from db import TWELVE_WEEK_PLAN, SIX_WEEK_PLAN
+    return {
+        "12_week": {"label": "12 semanas — Estándar", "weeks": TWELVE_WEEK_PLAN},
+        "6_week":  {"label": "6 semanas — Intensivo",  "weeks": SIX_WEEK_PLAN},
+    }
+
+
+# ── Chat ──────────────────────────────────────────────────────────────────────
+
+@app.post("/chat", tags=["chat"])
+async def chat(req: ChatRequest, user = Depends(get_optional_user)):
+    user_id = user["user_id"]
+    session_id = req.session_id or (f"web_{user_id}" if user_id != "dev_user" else str(uuid.uuid4()))
 
     history = sessions[session_id]
     response_text = await run_agent(
@@ -134,32 +186,36 @@ async def chat(
         history=history,
         user_message=req.message,
     )
-
-    return ChatResponse(
-        session_id=session_id,
-        response=response_text,
-        messages_in_session=len(history),
-    )
+    return {"session_id": session_id, "response": response_text, "messages_in_session": len(history)}
 
 
-@app.get("/progress/{user_id}")
-def progress(user_id: str):
-    """
-    Progress for any user_id (Clerk user_id, Telegram tg_chatid, or dev_user).
-    No auth required — IDs are opaque enough for a friends app.
-    """
+# ── Otros ─────────────────────────────────────────────────────────────────────
+
+@app.get("/", include_in_schema=False)
+def frontend():
+    return FileResponse(FRONTEND)
+
+
+@app.get("/health", tags=["system"])
+def health():
+    return {
+        "status": "ok", "version": "2.0.0",
+        "model": os.getenv("LLM_MODEL", "llama-3.3-70b-versatile"),
+        "telegram": bool(os.getenv("TELEGRAM_TOKEN")),
+        "db": "postgresql" if os.getenv("DATABASE_URL") else "sqlite",
+    }
+
+
+@app.get("/progress/{user_id}", tags=["legacy"])
+def progress_legacy(user_id: str):
+    """Backward compat — para Telegram y dev."""
     return get_progress(user_id)
 
 
-@app.delete("/session/{session_id}")
+@app.delete("/session/{session_id}", tags=["legacy"])
 def reset_session(session_id: str):
     sessions.pop(session_id, None)
-    return {"reset": True, "session_id": session_id}
-
-
-@app.get("/sessions")
-def list_sessions():
-    return {"active_sessions": list(sessions.keys())}
+    return {"reset": True}
 
 
 if __name__ == "__main__":
