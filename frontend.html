@@ -377,6 +377,9 @@ body{font-family:'Inter',sans-serif;background:var(--page);color:var(--text);hei
       <!-- Timer Pomodoro -->
       <button class="hdr-tool-btn" id="timer-btn" onclick="toggleTimer()" title="Pomodoro 25 min — click para iniciar/pausar, doble click para reiniciar" ondblclick="resetTimer()">⏱ <span class="hdr-timer" id="timer-display">25:00</span></button>
       <div class="hdr-vsep"></div>
+      <!-- Language toggle -->
+      <button class="hdr-tool-btn" id="lang-btn" onclick="cycleLang()" title="Idioma — click para cambiar"></button>
+      <div class="hdr-vsep"></div>
       <!-- Preguntas marcadas -->
       <button class="hdr-tool-btn" onclick="showFlagged()" title="Preguntas marcadas">📌<span class="hdr-badge hidden" id="flag-badge">0</span></button>
       <!-- Mis flashcards -->
@@ -550,6 +553,7 @@ const WEEKS = {
 let token=localStorage.getItem('gema_token')||null, user=null, plan=null, sid=localStorage.getItem('gema_sid')||null;
 let activeTopic='', activeStep=1, loading=false;
 let currentAC=null;  // AbortController for active stream — cancel before starting new one
+let activeLang=localStorage.getItem('gema_lang')||'bilingual'; // "es"|"en"|"bilingual"
 const questionRawData = {};  // cardId → raw question text (avoids onclick injection bug)
 
 function cancelCurrentStream(){
@@ -564,7 +568,7 @@ document.addEventListener('DOMContentLoaded',async()=>{
   document.getElementById('chat-input').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendInput();}});
   document.getElementById('chat-input').addEventListener('input',autosize);
   updateWeeks(); previewWeek();
-  initStreak(); updateFcBadge(); updateFlagBadge();
+  initStreak(); updateFcBadge(); updateFlagBadge(); updateLangBtn();
   if(token){await loadMe();}else{show('auth');}
 });
 
@@ -708,7 +712,7 @@ async function askQuestion(msg){
   try{
     const headers={'Content-Type':'application/json'};
     if(token)headers['Authorization']='Bearer '+token;
-    const body={message:msg};if(sid)body.session_id=sid;
+    const body={message:msg,language:activeLang};if(sid)body.session_id=sid;
 
     const resp=await fetch(API+'/chat/stream',{method:'POST',headers,body:JSON.stringify(body),signal:myAC.signal});
     if(!resp.ok)throw new Error('HTTP '+resp.status);
@@ -880,7 +884,7 @@ async function submitOpt(cardId){
   let fullText='';
   try{
     const headers={'Content-Type':'application/json'};if(token)headers['Authorization']='Bearer '+token;
-    const body={message:letter};if(sid)body.session_id=sid;
+    const body={message:letter,language:activeLang};if(sid)body.session_id=sid;
     const resp=await fetch(API+'/chat/stream',{method:'POST',headers,body:JSON.stringify(body),signal:myAC.signal});
     if(!resp.ok)throw new Error('HTTP '+resp.status);
     const reader=resp.body.getReader(),dec=new TextDecoder();
@@ -979,6 +983,35 @@ function autosize(){const el=document.getElementById('chat-input');el.style.heig
 async function refreshProgress(){
   if(!token)return;
   try{const r=await api('/me');updateUI(r.plan,r.progress);}catch{}
+}
+
+// ── LANGUAGE ────────────────────────────────────────────────────────────────
+const LANG_OPTS=[
+  {val:'bilingual',label:'🌐',title:'Bilingüe — el modelo responde en tu idioma'},
+  {val:'es',       label:'🇪🇸',title:'Español — todas las respuestas en español'},
+  {val:'en',       label:'🇺🇸',title:'English — all responses in English'},
+];
+function updateLangBtn(){
+  const opt=LANG_OPTS.find(o=>o.val===activeLang)||LANG_OPTS[0];
+  const btn=document.getElementById('lang-btn');
+  if(btn){btn.textContent=opt.label;btn.title=opt.title;}
+}
+function cycleLang(){
+  const idx=LANG_OPTS.findIndex(o=>o.val===activeLang);
+  activeLang=LANG_OPTS[(idx+1)%LANG_OPTS.length].val;
+  localStorage.setItem('gema_lang',activeLang);
+  updateLangBtn();
+  // Show toast
+  const opt=LANG_OPTS.find(o=>o.val===activeLang);
+  showToast(opt.label+' '+opt.title.split('—')[0].trim());
+}
+function showToast(msg){
+  let t=document.getElementById('lang-toast');
+  if(!t){t=document.createElement('div');t.id='lang-toast';
+    t.style.cssText='position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#1E293B;color:#fff;padding:8px 18px;border-radius:20px;font-size:13px;z-index:500;opacity:0;transition:opacity .3s';
+    document.body.appendChild(t);}
+  t.textContent=msg;t.style.opacity='1';
+  clearTimeout(t._to);t._to=setTimeout(()=>t.style.opacity='0',2000);
 }
 
 // ── STREAK ──────────────────────────────────────────────────────────────────

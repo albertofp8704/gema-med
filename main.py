@@ -101,6 +101,7 @@ class PlanRequest(BaseModel):
 class ChatRequest(BaseModel):
     session_id: str | None = None
     message: str
+    language: str | None = None   # "es" | "en" | "bilingual" (default)
 
 
 # ── Auth endpoints ────────────────────────────────────────────────────────────
@@ -194,6 +195,7 @@ async def chat(req: ChatRequest, user = Depends(get_optional_user)):
         history=history,
         user_message=req.message,
         user_id=user_id,
+        language=req.language,
     )
     return {"session_id": session_id, "response": response_text, "messages_in_session": len(history)}
 
@@ -214,7 +216,7 @@ async def chat_stream(req: ChatRequest, user = Depends(get_optional_user)):
         # Enviar session_id primero
         yield f"data: {_json.dumps({'session_id': session_id})}\n\n"
         # Stream tokens — pasar user_id real para save_result correcto
-        async for chunk in run_agent_stream(session_id, history, req.message, user_id=user_id):
+        async for chunk in run_agent_stream(session_id, history, req.message, user_id=user_id, language=req.language):
             yield f"data: {_json.dumps({'text': chunk})}\n\n"
         yield "data: [DONE]\n\n"
 

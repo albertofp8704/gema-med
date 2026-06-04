@@ -256,13 +256,22 @@ async def _dispatch_tool(name: str, inputs: dict, session_id: str) -> dict:
 
 # ── Streaming entry point ─────────────────────────────────────────────────────
 
-async def run_agent_stream(session_id: str, history: list[dict], user_message: str, user_id: str | None = None):
+_LANG_INSTRUCTIONS = {
+    "es":       "\n\nIDIOMA OBLIGATORIO: Responde SIEMPRE en español. Preguntas, opciones y explicaciones en español.",
+    "en":       "\n\nMANDATORY LANGUAGE: Always respond in English. Questions, options and explanations in English.",
+    "bilingual": "",   # model follows user's language
+}
+
+async def run_agent_stream(session_id: str, history: list[dict], user_message: str,
+                           user_id: str | None = None, language: str | None = None):
     """
     Async generator — yields text chunks for Server-Sent Events streaming.
     user_id: real DB user id for save_result/progress (NOT session_id which is 'web_{id}').
+    language: "es" | "en" | "bilingual" — controls system prompt language instruction.
     """
     # Resolve real user_id — prefer explicit, fall back to stripping 'web_' prefix
     real_uid = user_id or (session_id[4:] if session_id.startswith("web_") else session_id)
+    lang_note = _LANG_INSTRUCTIONS.get(language or "bilingual", "")
 
     history.append({"role": "user", "content": user_message})
     intent = _detect_intent(user_message)
@@ -291,7 +300,7 @@ async def run_agent_stream(session_id: str, history: list[dict], user_message: s
                 f"Explicación base: {q.get('explanation','')[:300]}"
             )
             system = (
-                SYSTEM_PROMPT.replace("{session_id}", session_id) + q_block
+                SYSTEM_PROMPT.replace("{session_id}", session_id) + lang_note + q_block
                 + f"\n\nINSTRUCCION OBLIGATORIA: Presenta la pregunta en formato UWorld. "
                 + f"La primera línea del output DEBE ser: **USMLE Step {step_num} — {display_topic}**"
                 + f"\nNO uses ningún otro tema. NO reveles la respuesta. "
@@ -311,14 +320,13 @@ async def run_agent_stream(session_id: str, history: list[dict], user_message: s
             stream = await client.chat.completions.create(
                 model=MODEL,
                 messages=[
-                    {"role": "system", "content": SYSTEM_PROMPT.replace("{session_id}", session_id)},
+                    {"role": "system", "content": SYSTEM_PROMPT.replace("{session_id}", session_id) + lang_note},
                     *history,
                 ],
                 stream=True, max_tokens=MAX_TOKENS, temperature=0.2,
             )
 
         elif intent in ("plan", "progress"):
-            # Tool calls can't stream — fall back to full response then yield
             text = await _tool_call_path(session_id, history, real_uid)
             history.append({"role": "assistant", "content": text})
             yield text
@@ -328,7 +336,7 @@ async def run_agent_stream(session_id: str, history: list[dict], user_message: s
             stream = await client.chat.completions.create(
                 model=MODEL,
                 messages=[
-                    {"role": "system", "content": SYSTEM_PROMPT.replace("{session_id}", session_id)},
+                    {"role": "system", "content": SYSTEM_PROMPT.replace("{session_id}", session_id) + lang_note},
                     *history,
                 ],
                 stream=True, max_tokens=MAX_TOKENS, temperature=0.3,
@@ -369,8 +377,10 @@ async def run_agent_stream(session_id: str, history: list[dict], user_message: s
 
 # ── Non-streaming entry point (kept for compatibility) ────────────────────────
 
-async def run_agent(session_id: str, history: list[dict], user_message: str, user_id: str | None = None) -> str:
+async def run_agent(session_id: str, history: list[dict], user_message: str,
+                    user_id: str | None = None, language: str | None = None) -> str:
     real_uid = user_id or (session_id[4:] if session_id.startswith("web_") else session_id)
+    lang_note = _LANG_INSTRUCTIONS.get(language or "bilingual", "")
     history.append({"role": "user", "content": user_message})
 
     intent = _detect_intent(user_message)
