@@ -193,6 +193,7 @@ async def chat(req: ChatRequest, user = Depends(get_optional_user)):
         session_id=session_id,
         history=history,
         user_message=req.message,
+        user_id=user_id,
     )
     return {"session_id": session_id, "response": response_text, "messages_in_session": len(history)}
 
@@ -212,8 +213,8 @@ async def chat_stream(req: ChatRequest, user = Depends(get_optional_user)):
     async def event_generator():
         # Enviar session_id primero
         yield f"data: {_json.dumps({'session_id': session_id})}\n\n"
-        # Stream tokens
-        async for chunk in run_agent_stream(session_id, history, req.message):
+        # Stream tokens — pasar user_id real para save_result correcto
+        async for chunk in run_agent_stream(session_id, history, req.message, user_id=user_id):
             yield f"data: {_json.dumps({'text': chunk})}\n\n"
         yield "data: [DONE]\n\n"
 

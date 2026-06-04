@@ -189,8 +189,9 @@ TOOLS = [
 ]
 
 
-async def _tool_call_path(session_id: str, history: list) -> str:
+async def _tool_call_path(session_id: str, history: list, real_uid: str | None = None) -> str:
     """Tool use para plan/progress/search — hasta 4 iteraciones."""
+    uid = real_uid or session_id
     messages = list(history)
     for _ in range(4):
         try:
@@ -220,7 +221,7 @@ async def _tool_call_path(session_id: str, history: list) -> str:
             for tc in msg.tool_calls:
                 try:
                     args   = json.loads(tc.function.arguments)
-                    result = await _dispatch_tool(tc.function.name, args, session_id)
+                    result = await _dispatch_tool(tc.function.name, args, uid)
                 except Exception as e:
                     result = {"error": str(e)}
                 messages.append({
@@ -255,11 +256,14 @@ async def _dispatch_tool(name: str, inputs: dict, session_id: str) -> dict:
 
 # ── Streaming entry point ─────────────────────────────────────────────────────
 
-async def run_agent_stream(session_id: str, history: list[dict], user_message: str):
+async def run_agent_stream(session_id: str, history: list[dict], user_message: str, user_id: str | None = None):
     """
     Async generator — yields text chunks for Server-Sent Events streaming.
-    Same logic as run_agent but streams tokens as they arrive from Groq.
+    user_id: real DB user id for save_result/progress (NOT session_id which is 'web_{id}').
     """
+    # Resolve real user_id — prefer explicit, fall back to stripping 'web_' prefix
+    real_uid = user_id or (session_id[4:] if session_id.startswith("web_") else session_id)
+
     history.append({"role": "user", "content": user_message})
     intent = _detect_intent(user_message)
     full_text = ""
@@ -314,7 +318,7 @@ async def run_agent_stream(session_id: str, history: list[dict], user_message: s
 
         elif intent in ("plan", "progress"):
             # Tool calls can't stream — fall back to full response then yield
-            text = await _tool_call_path(session_id, history)
+            text = await _tool_call_path(session_id, history, real_uid)
             history.append({"role": "assistant", "content": text})
             yield text
             return
@@ -346,7 +350,7 @@ async def run_agent_stream(session_id: str, history: list[dict], user_message: s
                 is_correct = "correcto" in first and "incorrecto" not in first
                 try:
                     save_result(
-                        user_id=session_id,
+                        user_id=real_uid,          # <-- real DB user_id, not session_id
                         question_id=last_q.get("id", "unknown"),
                         topic=last_q.get("topic", "general"),
                         step=last_q.get("step", 1),
@@ -364,7 +368,8 @@ async def run_agent_stream(session_id: str, history: list[dict], user_message: s
 
 # ── Non-streaming entry point (kept for compatibility) ────────────────────────
 
-async def run_agent(session_id: str, history: list[dict], user_message: str) -> str:
+async def run_agent(session_id: str, history: list[dict], user_message: str, user_id: str | None = None) -> str:
+    real_uid = user_id or (session_id[4:] if session_id.startswith("web_") else session_id)
     history.append({"role": "user", "content": user_message})
 
     intent = _detect_intent(user_message)
@@ -388,7 +393,7 @@ async def run_agent(session_id: str, history: list[dict], user_message: str) -> 
                 is_correct = "correcto" in first_line and "incorrecto" not in first_line
                 try:
                     save_result(
-                        user_id=session_id,
+                        user_id=real_uid,          # <-- real DB user_id
                         question_id=last_q.get("id", "unknown"),
                         topic=last_q.get("topic", "general"),
                         step=last_q.get("step", 1),
@@ -399,7 +404,7 @@ async def run_agent(session_id: str, history: list[dict], user_message: str) -> 
 
         elif intent in ("plan", "progress"):
             # Tool use para operaciones de DB
-            text = await _tool_call_path(session_id, history)
+            text = await _tool_call_path(session_id, history, real_uid)
 
         else:
             # Chat general — 1 call sin tools
