@@ -37,19 +37,17 @@ TOOLS = [
                 "properties": {
                     "topic": {
                         "type": "string",
-                        "description": "Tema médico para filtrar (omitir para preguntas mixtas en simulacro/diagnóstico)",
-                        "enum": [
-                            "cardiology", "pulmonology", "nephrology", "neurology",
-                            "gastroenterology", "endocrinology", "hematology",
-                            "pharmacology", "microbiology", "pathology",
-                            "ob_gyn", "pediatrics", "psychiatry", "biostatistics",
-                            "anatomy", "physiology", "biochemistry",
-                        ],
+                        "description": (
+                            "Tema médico a filtrar. Dejar vacío para preguntas aleatorias. "
+                            "Valores válidos: cardiology, pulmonology, nephrology, neurology, "
+                            "gastroenterology, endocrinology, hematology, pharmacology, "
+                            "microbiology, pathology, ob_gyn, pediatrics, psychiatry, "
+                            "biostatistics, anatomy, physiology, biochemistry"
+                        ),
                     },
                     "step": {
                         "type": "string",
-                        "description": "Nivel USMLE",
-                        "enum": ["step1", "step2", "step3"],
+                        "description": "Nivel USMLE. Dejar vacío para cualquier step. Valores válidos: step1, step2, step3",
                     },
                 },
             },
@@ -242,9 +240,18 @@ async def run_agent(session_id: str, history: list[dict], user_message: str) -> 
 
 async def _dispatch(name: str, inputs: dict, session_id: str) -> dict:
     if name == "get_usmle_question":
+        # Validate + sanitize — reject invalid values silently (8b model passes garbage)
+        VALID_TOPICS = {
+            "cardiology","pulmonology","nephrology","neurology","gastroenterology",
+            "endocrinology","hematology","pharmacology","microbiology","pathology",
+            "ob_gyn","pediatrics","psychiatry","biostatistics","anatomy","physiology","biochemistry",
+        }
+        VALID_STEPS = {"step1","step2","step3"}
+        raw_topic = (inputs.get("topic") or "").strip().lower()
+        raw_step  = (inputs.get("step")  or "").strip().lower()
         return get_usmle_question(
-            topic=inputs.get("topic"),
-            step=inputs.get("step"),
+            topic=raw_topic if raw_topic in VALID_TOPICS else None,
+            step =raw_step  if raw_step  in VALID_STEPS  else None,
         )
 
     if name == "search_pubmed":
