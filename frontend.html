@@ -167,8 +167,8 @@ body{font-family:'Inter',sans-serif;background:var(--page);color:var(--text);hei
 .opt-btn.wrong .opt-letter{background:var(--red);color:#fff;}
 .opt-text{font-size:14px;line-height:1.5;color:var(--text);flex:1;}
 .q-footer{padding:14px 24px;border-top:1px solid #F3F4F6;display:flex;align-items:center;gap:10px;}
-.confirm-btn{background:var(--blue);color:#fff;border:none;border-radius:8px;padding:10px 20px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .15s;}
-.confirm-btn:hover:not(:disabled){background:var(--blue-h);}
+.confirm-btn{background:var(--blue);color:#fff;border:none;border-radius:8px;padding:12px 28px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .15s;min-width:180px;}
+.confirm-btn:hover:not(:disabled){background:var(--blue-h);transform:translateY(-1px);}
 .confirm-btn:disabled{background:#9CA3AF;cursor:not-allowed;}
 .skip-btn{background:none;border:1px solid var(--border);color:var(--muted);border-radius:8px;padding:10px 16px;font-size:13px;cursor:pointer;font-family:inherit;transition:all .15s;}
 .skip-btn:hover{border-color:var(--text);color:var(--text);}
@@ -616,7 +616,7 @@ function renderQuestionCard(parsed,raw){
     </div>
     <div class="q-options">
       ${Object.entries(parsed.opts).map(([l,t])=>`
-        <button class="opt-btn" id="opt-${id}-${l}" data-letter="${l}" onclick="selectOpt('${id}','${l}')">
+        <button class="opt-btn" id="opt-${id}-${l}" data-letter="${l}" onclick="selectOpt('${id}','${l}')" ondblclick="selectOpt('${id}','${l}');submitOpt('${id}')">
           <span class="opt-letter">${l}</span>
           <span class="opt-text">${esc(t)}</span>
         </button>`).join('')}
