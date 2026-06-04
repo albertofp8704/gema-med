@@ -96,11 +96,11 @@ body{font-family:'Inter',sans-serif;background:var(--page);color:var(--text);hei
 .sb-sec-title{font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4B6A87;margin-bottom:8px;}
 
 /* Filter buttons */
-.filter-btn{display:flex;align-items:center;gap:8px;width:100%;padding:7px 10px;background:transparent;border:none;color:#94A3B8;border-radius:7px;cursor:pointer;font-family:inherit;font-size:13px;text-align:left;transition:all .15s;}
+.filter-btn{display:flex;align-items:center;gap:8px;width:100%;padding:8px 12px;background:transparent;border:none;color:#94A3B8;border-radius:9px;cursor:pointer;font-family:inherit;font-size:13px;text-align:left;transition:all .2s ease;position:relative;}
 .filter-btn:hover{background:var(--sb-hover);color:#fff;}
-.filter-btn.active{background:var(--sb-act);color:#fff;font-weight:600;}
+.filter-btn.active{background:var(--blue);color:#fff;font-weight:600;box-shadow:0 4px 12px rgba(27,94,190,.3);}
 .filter-btn .f-dot{width:8px;height:8px;border-radius:50%;background:currentColor;opacity:.5;flex-shrink:0;}
-.filter-btn.active .f-dot{opacity:1;}
+.filter-btn.active .f-dot{opacity:1;animation:pulse-dot .6s ease-in-out infinite;}
 
 .step-row{display:flex;gap:4px;padding:2px 10px 10px;}
 .step-pill{flex:1;padding:5px;background:#1A3352;border:1px solid #2A4A6A;color:#6B8FAD;border-radius:7px;font-size:12px;font-weight:500;cursor:pointer;font-family:inherit;text-align:center;transition:all .15s;border:none;}
@@ -215,6 +215,7 @@ body{font-family:'Inter',sans-serif;background:var(--page);color:var(--text);hei
 /* Loading */
 .loading-card{background:var(--card);border-radius:12px;border:1px solid var(--border);padding:20px 24px;display:flex;align-items:center;gap:12px;}
 @keyframes pulse{0%,80%,100%{transform:scale(.7);opacity:.5}40%{transform:scale(1);opacity:1}}
+@keyframes pulse-dot{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.3);opacity:.8}}
 .dot{width:8px;height:8px;background:#9CA3AF;border-radius:50%;display:inline-block;}
 .d1{animation:pulse 1.2s infinite 0ms}.d2{animation:pulse 1.2s infinite 200ms}.d3{animation:pulse 1.2s infinite 400ms}
 
@@ -510,7 +511,16 @@ function updateUI(pl,pr){
 }
 
 // FILTERS
-function setTopic(btn,topic){activeTopic=topic;document.querySelectorAll('#filter-list .filter-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');}
+function setTopic(btn,topic){
+  activeTopic=topic;
+  document.querySelectorAll('#filter-list .filter-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  // Update header to show selected topic
+  const topicLabel=topic?btn.textContent.trim().split('\n')[0]:'Todos los temas';
+  const phaseEl=document.getElementById('hdr-phase');if(phaseEl)phaseEl.textContent=`→ ${topicLabel}`;
+  // Auto-load question when topic changes
+  if(user){setTimeout(()=>newQuestion(topic),300);}
+}
 function setStep(s){activeStep=s;['sp1','sp2','sp3'].forEach((id,i)=>document.getElementById(id).classList.toggle('active',i+1===s));}
 
 // QUESTION FLOW
