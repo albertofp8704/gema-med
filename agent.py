@@ -28,6 +28,9 @@ client = AsyncOpenAI(
 MODEL      = os.getenv("LLM_MODEL", "llama-3.1-8b-instant")
 MAX_TOKENS = int(os.getenv("MAX_TOKENS", "1000"))
 
+# Last question per session — needed to save results after answering
+_session_last_question: dict[str, dict] = {}
+
 # ── Detección rápida de intención ─────────────────────────────────────────────
 
 _QUESTION_WORDS = {"pregunta","question","dame","give","quiz","otra","next","siguiente",
@@ -62,6 +65,7 @@ def _detect_intent(text: str) -> str:
 async def _fast_question(session_id: str, history: list, topic: str | None, step: str | None) -> str:
     """Fetch pregunta en Python + 1 Groq call para formatearla. Evita 1 roundtrip."""
     q = get_usmle_question(topic=topic, step=step)
+    _session_last_question[session_id] = q  # store for save_result after answer
 
     opts_text = "\n".join(f"{k}) {v}" for k, v in q["options"].items())
     q_block = (
@@ -263,6 +267,21 @@ async def run_agent(session_id: str, history: list[dict], user_message: str) -> 
         elif intent == "answer":
             # Fast path: 1 API call con historial (el modelo ve la pregunta anterior)
             text = await _fast_explanation(session_id, history, user_message.strip().upper())
+            # Save result — detect correct/incorrect from first line of response
+            last_q = _session_last_question.get(session_id)
+            if last_q:
+                first_line = text[:120].lower()
+                is_correct = "correcto" in first_line and "incorrecto" not in first_line
+                try:
+                    save_result(
+                        user_id=session_id,
+                        question_id=last_q.get("id", "unknown"),
+                        topic=last_q.get("topic", "general"),
+                        step=last_q.get("step", 1),
+                        correct=is_correct,
+                    )
+                except Exception as e:
+                    print(f"[save_result error] {e}")
 
         elif intent in ("plan", "progress"):
             # Tool use para operaciones de DB

@@ -112,12 +112,18 @@ Cuando el usuario responda, usa EXACTAMENTE esta estructura (igual que UWorld):
 • [Dato clave 2 — mnemotecnia si existe]
 • [Dato clave 3 — asociación clásica en boards]
 
-**REFERENCE**
-First Aid 2024: [capítulo/página] · Pathoma: [capítulo si aplica]
+**REFERENCES**
+Recursos relevantes para este tema (menciona solo los que apliquen, NO inventes páginas):
+- First Aid for USMLE Step 1 2025 — [área temática, ej: "Cardiovascular"]
+- Pathoma 2024 — [capítulo temático, ej: "Ch.5 - Pulmonary"]
+- Sketchy Medical — Micro/Pharma cuando corresponda
+- AMBOSS — para conceptos clínicos avanzados
+- PubMed — si hay evidencia reciente relevante (cita PMID real)
+⚠️ NUNCA inventes números de página o capítulo específicos. Solo cita el recurso y el área.
 ---
 
 Si la herramienta `get_usmle_question` devuelve un campo `explanation` no vacío,
-úsalo como referencia para construir tu explicación (no lo copies literal).
+úsalo como referencia base para construir tu explicación (no lo copies literal).
 
 ---
 
