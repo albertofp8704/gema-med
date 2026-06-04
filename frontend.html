@@ -526,16 +526,68 @@ function newQuestion(topic,step){
 async function askQuestion(msg){
   clearWelcome();
   appendUserMsg(msg);
-  const tid=appendLoading();
   loading=true;document.getElementById('send-btn').disabled=true;
+
+  // Create streaming bubble
+  const streamId='st'+Date.now();
+  const streamRow=document.createElement('div');
+  streamRow.id=streamId;
+  streamRow.className='chat-card';
+  streamRow.innerHTML=`
+    <div class="chat-role">🩺 GEMA-MED <span id="stream-dot-${streamId}" style="color:#60A5FA;font-size:11px;font-weight:400">● generando...</span></div>
+    <div class="chat-body" id="stream-body-${streamId}" style="font-size:14px;line-height:1.7;white-space:pre-wrap"></div>`;
+  document.getElementById('q-area').appendChild(streamRow);
+  scrollBottom();
+
+  let fullText='';
   try{
+    const headers={'Content-Type':'application/json'};
+    if(token)headers['Authorization']='Bearer '+token;
     const body={message:msg};if(sid)body.session_id=sid;
-    const r=await api('/chat',{method:'POST',body});
-    sid=r.session_id;localStorage.setItem('gema_sid',sid);
-    removeEl(tid);
-    renderResponse(r.response);
+
+    const resp=await fetch(API+'/chat/stream',{method:'POST',headers,body:JSON.stringify(body)});
+    if(!resp.ok)throw new Error('HTTP '+resp.status);
+
+    const reader=resp.body.getReader();
+    const dec=new TextDecoder();
+    const bodyEl=document.getElementById('stream-body-'+streamId);
+    const dotEl=document.getElementById('stream-dot-'+streamId);
+
+    let buf='';
+    while(true){
+      const{done,value}=await reader.read();
+      if(done)break;
+      buf+=dec.decode(value,{stream:true});
+      // Process complete SSE lines
+      let nl;
+      while((nl=buf.indexOf('\n\n'))!==-1){
+        const chunk=buf.slice(0,nl).trim();
+        buf=buf.slice(nl+2);
+        if(!chunk.startsWith('data: '))continue;
+        const payload=chunk.slice(6);
+        if(payload==='[DONE]')break;
+        try{
+          const d=JSON.parse(payload);
+          if(d.session_id){sid=d.session_id;localStorage.setItem('gema_sid',sid);}
+          if(d.text){
+            fullText+=d.text;
+            if(bodyEl)bodyEl.textContent=fullText;
+            scrollBottom();
+          }
+        }catch{}
+      }
+    }
+
+    // Stream done — remove streaming bubble, render final content
+    if(dotEl)dotEl.textContent='';
+    streamRow.remove();
+    renderResponse(fullText);
     await refreshProgress();
-  }catch(ex){removeEl(tid);appendChatCard('Error: '+ex.message);}
+
+  }catch(ex){
+    const r=document.getElementById(streamId);if(r)r.remove();
+    appendChatCard('❌ Error: '+ex.message);
+  }
   loading=false;document.getElementById('send-btn').disabled=false;
 }
 
@@ -639,22 +691,46 @@ function selectOpt(cardId,letter){
 }
 
 async function submitOpt(cardId){
-  const rawQ=questionRawData[cardId]||'';
   const letter=selectedOpts[cardId];if(!letter)return;
-  const opts=document.querySelectorAll(`[id^="opt-${cardId}"]`);
-  opts.forEach(b=>b.classList.add('locked'));
+  document.querySelectorAll(`[id^="opt-${cardId}"]`).forEach(b=>b.classList.add('locked'));
   document.getElementById(`conf-${cardId}`).disabled=true;
-
-  const tid=appendLoading();
   loading=true;document.getElementById('send-btn').disabled=true;
+
+  // Streaming explanation bubble
+  const stId='expst'+Date.now();
+  const stEl=document.createElement('div');
+  stEl.id=stId;stEl.className='chat-card';
+  stEl.innerHTML=`<div class="chat-role">🩺 GEMA-MED <span style="color:#60A5FA;font-size:11px;font-weight:400">● explicando...</span></div>
+    <div class="chat-body" id="sb${stId}" style="font-size:14px;line-height:1.7;white-space:pre-wrap"></div>`;
+  document.getElementById('q-area').appendChild(stEl);scrollBottom();
+
+  let fullText='';
   try{
+    const headers={'Content-Type':'application/json'};if(token)headers['Authorization']='Bearer '+token;
     const body={message:letter};if(sid)body.session_id=sid;
-    const r=await api('/chat',{method:'POST',body});
-    sid=r.session_id;localStorage.setItem('gema_sid',sid);
-    removeEl(tid);
-    renderExplanation(r.response,cardId,letter);
+    const resp=await fetch(API+'/chat/stream',{method:'POST',headers,body:JSON.stringify(body)});
+    if(!resp.ok)throw new Error('HTTP '+resp.status);
+    const reader=resp.body.getReader(),dec=new TextDecoder();
+    const bEl=document.getElementById('sb'+stId);
+    let buf='';
+    while(true){
+      const{done,value}=await reader.read();if(done)break;
+      buf+=dec.decode(value,{stream:true});
+      let nl;
+      while((nl=buf.indexOf('\n\n'))!==-1){
+        const chunk=buf.slice(0,nl).trim();buf=buf.slice(nl+2);
+        if(!chunk.startsWith('data: '))continue;
+        const payload=chunk.slice(6);if(payload==='[DONE]')break;
+        try{const d=JSON.parse(payload);
+          if(d.session_id){sid=d.session_id;localStorage.setItem('gema_sid',sid);}
+          if(d.text){fullText+=d.text;if(bEl)bEl.textContent=fullText;scrollBottom();}
+        }catch{}
+      }
+    }
+    stEl.remove();
+    renderExplanation(fullText,cardId,letter);
     await refreshProgress();
-  }catch(ex){removeEl(tid);appendChatCard('Error: '+ex.message);}
+  }catch(ex){const r=document.getElementById(stId);if(r)r.remove();appendChatCard('Error: '+ex.message);}
   loading=false;document.getElementById('send-btn').disabled=false;
 }
 

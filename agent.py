@@ -248,7 +248,110 @@ async def _dispatch_tool(name: str, inputs: dict, session_id: str) -> dict:
     return {"error": f"Unknown tool: {name}"}
 
 
-# ── Entry point ───────────────────────────────────────────────────────────────
+# ── Streaming entry point ─────────────────────────────────────────────────────
+
+async def run_agent_stream(session_id: str, history: list[dict], user_message: str):
+    """
+    Async generator — yields text chunks for Server-Sent Events streaming.
+    Same logic as run_agent but streams tokens as they arrive from Groq.
+    """
+    history.append({"role": "user", "content": user_message})
+    intent = _detect_intent(user_message)
+    full_text = ""
+
+    try:
+        if intent == "question":
+            topic_m = _TOPIC_RE.search(user_message)
+            step_m  = _STEP_RE.search(user_message)
+            topic   = topic_m.group(0).lower() if topic_m else None
+            step    = f"step{step_m.group(1)}" if step_m else None
+
+            q = get_usmle_question(topic=topic, step=step)
+            _session_last_question[session_id] = q
+
+            opts_text = "\n".join(f"{k}) {v}" for k, v in q["options"].items())
+            q_block = (
+                f"\n\nPREGUNTA (ID:{q['id']} | Tema:{q['topic']}):\n"
+                f"{q['question']}\n\nOpciones:\n{opts_text}\n"
+                f"Respuesta correcta: {q['correct_letter']}) {q['correct_answer']}\n"
+                f"Explicación base: {q.get('explanation','')[:300]}"
+            )
+            system = (
+                SYSTEM_PROMPT.replace("{session_id}", session_id) + q_block
+                + "\n\nINSTRUCCIÓN: Presenta la pregunta en formato UWorld exacto. "
+                + "NO reveles la respuesta. Termina con '*(Escribe tu respuesta: A, B, C o D)*'"
+            )
+            stream = await client.chat.completions.create(
+                model=MODEL,
+                messages=[
+                    {"role": "system", "content": system},
+                    *history[:-1],
+                    {"role": "user", "content": "Presenta la siguiente pregunta USMLE."},
+                ],
+                stream=True, max_tokens=700, temperature=0.2,
+            )
+
+        elif intent == "answer":
+            stream = await client.chat.completions.create(
+                model=MODEL,
+                messages=[
+                    {"role": "system", "content": SYSTEM_PROMPT.replace("{session_id}", session_id)},
+                    *history,
+                ],
+                stream=True, max_tokens=MAX_TOKENS, temperature=0.2,
+            )
+
+        elif intent in ("plan", "progress"):
+            # Tool calls can't stream — fall back to full response then yield
+            text = await _tool_call_path(session_id, history)
+            history.append({"role": "assistant", "content": text})
+            yield text
+            return
+
+        else:
+            stream = await client.chat.completions.create(
+                model=MODEL,
+                messages=[
+                    {"role": "system", "content": SYSTEM_PROMPT.replace("{session_id}", session_id)},
+                    *history,
+                ],
+                stream=True, max_tokens=MAX_TOKENS, temperature=0.3,
+            )
+
+        # Yield chunks as they arrive
+        async for chunk in stream:
+            delta = chunk.choices[0].delta.content or ""
+            if delta:
+                full_text += delta
+                yield delta
+
+        history.append({"role": "assistant", "content": full_text})
+
+        # Post-stream: save result if it was an answer
+        if intent == "answer":
+            last_q = _session_last_question.get(session_id)
+            if last_q:
+                first = full_text[:120].lower()
+                is_correct = "correcto" in first and "incorrecto" not in first
+                try:
+                    save_result(
+                        user_id=session_id,
+                        question_id=last_q.get("id", "unknown"),
+                        topic=last_q.get("topic", "general"),
+                        step=last_q.get("step", 1),
+                        correct=is_correct,
+                    )
+                except Exception as e:
+                    print(f"[save_result error] {e}")
+
+    except Exception as e:
+        print(f"[STREAM ERROR] {type(e).__name__}: {e}")
+        err = f"Error: {str(e)[:200]}"
+        yield err
+        history.append({"role": "assistant", "content": err})
+
+
+# ── Non-streaming entry point (kept for compatibility) ────────────────────────
 
 async def run_agent(session_id: str, history: list[dict], user_message: str) -> str:
     history.append({"role": "user", "content": user_message})

@@ -17,8 +17,9 @@ import uvicorn
 from dotenv import load_dotenv
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel
+import json as _json
 
 load_dotenv()
 
@@ -32,7 +33,7 @@ from db import (
     set_study_plan, get_study_plan, update_study_phase,
     get_week_detail, PLAN_TEMPLATES,
 )
-from agent import run_agent
+from agent import run_agent, run_agent_stream
 
 sessions: dict[str, list] = defaultdict(list)
 FRONTEND = Path(__file__).parent / "frontend.html"
@@ -197,6 +198,35 @@ async def chat(req: ChatRequest, user = Depends(get_optional_user)):
 
 
 # ── Otros ─────────────────────────────────────────────────────────────────────
+
+@app.post("/chat/stream", tags=["chat"])
+async def chat_stream(req: ChatRequest, user = Depends(get_optional_user)):
+    """
+    Streaming chat — Server-Sent Events.
+    El frontend lee tokens en tiempo real: el texto aparece mientras se genera.
+    """
+    user_id   = user["user_id"]
+    session_id = req.session_id or (f"web_{user_id}" if user_id != "dev_user" else str(uuid.uuid4()))
+    history   = sessions[session_id]
+
+    async def event_generator():
+        # Enviar session_id primero
+        yield f"data: {_json.dumps({'session_id': session_id})}\n\n"
+        # Stream tokens
+        async for chunk in run_agent_stream(session_id, history, req.message):
+            yield f"data: {_json.dumps({'text': chunk})}\n\n"
+        yield "data: [DONE]\n\n"
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control":    "no-cache",
+            "Connection":       "keep-alive",
+            "X-Accel-Buffering":"no",   # Railway/Nginx: disable response buffering
+        },
+    )
+
 
 @app.get("/", include_in_schema=False)
 def frontend():
