@@ -21,7 +21,7 @@ client = AsyncOpenAI(
     base_url=os.getenv("LLM_BASE_URL", "https://api.groq.com/openai/v1"),
 )
 
-MODEL = os.getenv("LLM_MODEL", "llama-3.3-70b-versatile")
+MODEL = os.getenv("LLM_MODEL", "llama3-groq-70b-8192-tool-use-preview")
 
 TOOLS = [
     {
@@ -169,17 +169,42 @@ async def run_agent(session_id: str, history: list[dict], user_message: str) -> 
     history.append({"role": "user", "content": user_message})
     messages = list(history)
 
-    while True:
-        response = await client.chat.completions.create(
-            model=MODEL,
-            messages=[
-                {"role": "system", "content": SYSTEM_PROMPT.replace("{session_id}", session_id)},
-                *messages,
-            ],
-            tools=TOOLS,
-            tool_choice="auto",
-            max_tokens=2048,
-        )
+    max_iterations = 8   # safety limit against infinite loops
+    iterations = 0
+
+    while iterations < max_iterations:
+        iterations += 1
+        try:
+            response = await client.chat.completions.create(
+                model=MODEL,
+                messages=[
+                    {"role": "system", "content": SYSTEM_PROMPT.replace("{session_id}", session_id)},
+                    *messages,
+                ],
+                tools=TOOLS,
+                tool_choice="auto",
+                max_tokens=2048,
+            )
+        except Exception as e:
+            # Groq tool-call format errors: retry without tools
+            if "tool" in str(e).lower() or "400" in str(e):
+                try:
+                    fallback = await client.chat.completions.create(
+                        model=MODEL,
+                        messages=[
+                            {"role": "system", "content": SYSTEM_PROMPT.replace("{session_id}", session_id)},
+                            *messages,
+                            {"role": "user", "content": "(Responde en texto plano, sin usar herramientas)"},
+                        ],
+                        max_tokens=2048,
+                    )
+                    text = fallback.choices[0].message.content or ""
+                    history.append({"role": "assistant", "content": text})
+                    return text
+                except Exception:
+                    pass
+            history.append({"role": "assistant", "content": f"Error temporal del modelo. Intenta de nuevo."})
+            return "Error temporal. Por favor intenta de nuevo."
 
         choice = response.choices[0]
         msg    = choice.message
@@ -192,8 +217,11 @@ async def run_agent(session_id: str, history: list[dict], user_message: str) -> 
             })
 
             for tc in msg.tool_calls:
-                args   = json.loads(tc.function.arguments)
-                result = await _dispatch(tc.function.name, args, session_id)
+                try:
+                    args   = json.loads(tc.function.arguments)
+                    result = await _dispatch(tc.function.name, args, session_id)
+                except Exception as e:
+                    result = {"error": str(e)}
                 messages.append({
                     "role":         "tool",
                     "tool_call_id": tc.id,
@@ -203,6 +231,8 @@ async def run_agent(session_id: str, history: list[dict], user_message: str) -> 
             text = msg.content or ""
             history.append({"role": "assistant", "content": text})
             return text
+
+    return "Error: demasiadas iteraciones. Intenta de nuevo."
 
 
 async def _dispatch(name: str, inputs: dict, session_id: str) -> dict:
