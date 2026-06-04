@@ -422,6 +422,7 @@ const WEEKS = {
 // STATE
 let token=localStorage.getItem('gema_token')||null, user=null, plan=null, sid=localStorage.getItem('gema_sid')||null;
 let activeTopic='', activeStep=1, loading=false;
+const questionRawData = {};  // cardId → raw question text (avoids onclick injection bug)
 
 // INIT
 document.addEventListener('DOMContentLoaded',async()=>{
@@ -554,9 +555,7 @@ function sendInput(){
         // Simula selección + confirma
         selectOpt(cardId,letter);
         inp.value='';inp.style.height='auto';
-        const rawQ=activeConf.getAttribute('onclick').match(/'([^']+)','([^']*)'\)/);
-        const raw=rawQ?rawQ[2]:'';
-        submitOpt(cardId,raw);
+        submitOpt(cardId);
         return;
       }
     }
@@ -600,6 +599,7 @@ function parseQuestion(text){
 function renderQuestionCard(parsed,raw){
   questionCount++;
   const id='qc'+Date.now();
+  questionRawData[id]=raw;  // store safely outside onclick attribute
   const card=document.createElement('div');
   card.className='q-card';card.id=id;
   const topicMatch=raw.match(/USMLE Step \d[^—\n]*—\s*([^\n*]+)/i);
@@ -622,7 +622,7 @@ function renderQuestionCard(parsed,raw){
         </button>`).join('')}
     </div>
     <div class="q-footer">
-      <button class="confirm-btn" id="conf-${id}" disabled onclick="submitOpt('${id}','${raw}')">Confirmar respuesta</button>
+      <button class="confirm-btn" id="conf-${id}" disabled onclick="submitOpt('${id}')">Confirmar respuesta</button>
       <button class="skip-btn" onclick="newQuestion()">Nueva pregunta →</button>
     </div>`;
   document.getElementById('q-area').appendChild(card);
@@ -638,7 +638,8 @@ function selectOpt(cardId,letter){
   document.getElementById(`conf-${cardId}`).disabled=false;
 }
 
-async function submitOpt(cardId,rawQ){
+async function submitOpt(cardId){
+  const rawQ=questionRawData[cardId]||'';
   const letter=selectedOpts[cardId];if(!letter)return;
   const opts=document.querySelectorAll(`[id^="opt-${cardId}"]`);
   opts.forEach(b=>b.classList.add('locked'));
