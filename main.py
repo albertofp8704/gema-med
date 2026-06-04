@@ -53,6 +53,13 @@ async def lifespan(app: FastAPI):
     channels = ["Web (http://localhost:8000)", "REST API (/docs)"]
     if telegram_started: channels.append("Telegram")
     print(f"✅ GEMA-MED listo — {', '.join(channels)}")
+
+    # Precalentar el banco de preguntas en background (evita timeout en primera pregunta)
+    import asyncio
+    from tools import _load_dataset
+    asyncio.create_task(asyncio.to_thread(_load_dataset))
+    print("⏳ Cargando banco de preguntas en background...")
+
     yield
 
     if telegram_started:

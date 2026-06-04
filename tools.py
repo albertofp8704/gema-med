@@ -183,7 +183,7 @@ def _load_dataset() -> list[dict]:
     if _dataset is None:
         print("GEMA-MED: cargando banco de preguntas combinado...")
         gbaker   = _load_gbaker()
-        medmcqa  = _load_medmcqa(max_questions=100_000)
+        medmcqa  = _load_medmcqa(max_questions=30_000)
         combined = gbaker + medmcqa
         random.shuffle(combined)          # mezclar fuentes
         _dataset = combined
