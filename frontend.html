@@ -536,6 +536,27 @@ async function askQuestion(msg){
 function sendInput(){
   const inp=document.getElementById('chat-input'),txt=inp.value.trim();
   if(!txt||loading)return;
+
+  // Si el usuario escribe A/B/C/D y hay una pregunta activa sin confirmar, confirma esa pregunta
+  if(/^[A-Da-d]$/.test(txt)){
+    const activeConf=document.querySelector('.confirm-btn:not([disabled])');
+    const activePending=document.querySelector('.opt-btn:not(.locked)');
+    if(activeConf&&activePending){
+      const cardId=activeConf.id.replace('conf-','');
+      const letter=txt.toUpperCase();
+      const optBtn=document.getElementById('opt-'+cardId+'-'+letter);
+      if(optBtn){
+        // Simula selección + confirma
+        selectOpt(cardId,letter);
+        inp.value='';inp.style.height='auto';
+        const rawQ=activeConf.getAttribute('onclick').match(/'([^']+)','([^']*)'\)/);
+        const raw=rawQ?rawQ[2]:'';
+        submitOpt(cardId,raw);
+        return;
+      }
+    }
+  }
+
   inp.value='';inp.style.height='auto';
   askQuestion(txt);
 }
@@ -546,17 +567,25 @@ function renderResponse(text){
   else{appendChatCard(text);}
 }
 
-// QUESTION PARSER
+// QUESTION PARSER — strict: requires USMLE header AND answer footer
 function parseQuestion(text){
+  // Explanations also contain "A) ..." patterns — must verify it's really a question
+  if(!/\*\*USMLE Step/i.test(text))return null;                         // needs header
+  if(!/Escribe tu respuesta|Write your answer/i.test(text))return null;  // needs footer
+
   const plain=text.replace(/\*\*/g,'').replace(/\*/g,'');
   const lines=plain.split('\n').map(l=>l.trim()).filter(Boolean);
   const opts={};let vignette=[],stem='',inOpts=false;
   for(const line of lines){
-    if(/^USMLE Step|^---$|^Escribe tu respuesta/i.test(line))continue;
+    if(/^USMLE Step|^---$|^Escribe tu respuesta|^Write your answer/i.test(line))continue;
     const m=line.match(/^([A-D])\)\s+(.+)/);
     if(m){opts[m[1]]=m[2];inOpts=true;continue;}
     if(inOpts)continue;
-    if(line.endsWith('?')&&line.length<200&&(line.includes('siguiente')||line.includes('following')||line.includes('which')||line.includes('cuál')||line.includes('cual'))){stem=line;continue;}
+    if(line.endsWith('?')&&line.length<200&&(
+      line.includes('siguiente')||line.includes('following')||
+      line.includes('which')||line.includes('cuál')||line.includes('cual')||
+      line.includes('most likely')||line.includes('best')
+    )){stem=line;continue;}
     vignette.push(line);
   }
   if(Object.keys(opts).length<2)return null;
