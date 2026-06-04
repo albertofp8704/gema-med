@@ -549,7 +549,18 @@ const WEEKS = {
 // STATE
 let token=localStorage.getItem('gema_token')||null, user=null, plan=null, sid=localStorage.getItem('gema_sid')||null;
 let activeTopic='', activeStep=1, loading=false;
+let currentAC=null;  // AbortController for active stream — cancel before starting new one
 const questionRawData = {};  // cardId → raw question text (avoids onclick injection bug)
+
+function cancelCurrentStream(){
+  if(currentAC){currentAC.abort();currentAC=null;}
+  // Remove any orphaned streaming bubbles
+  document.querySelectorAll('.chat-card').forEach(el=>{
+    if(el.querySelector('[id^="stream-dot-"]')||el.querySelector('[id^="sb"]'))el.remove();
+  });
+  loading=false;
+  const sb=document.getElementById('send-btn');if(sb)sb.disabled=false;
+}
 
 // INIT
 document.addEventListener('DOMContentLoaded',async()=>{
@@ -657,8 +668,13 @@ function setTopic(btn,topic){
   // Update header to show selected topic
   const topicLabel=topic?btn.textContent.trim().split('\n')[0]:'Todos los temas';
   const phaseEl=document.getElementById('hdr-phase');if(phaseEl)phaseEl.textContent=`→ ${topicLabel}`;
-  // Auto-load question when topic changes
-  if(user){setTimeout(()=>newQuestion(topic),300);}
+  if(!user)return;
+  // Cancel any ongoing stream and load new question immediately
+  cancelCurrentStream();
+  // Clear previous question cards to avoid clutter
+  const area=document.getElementById('q-area');
+  if(area)area.innerHTML='';
+  newQuestion(topic);
 }
 function setStep(s){activeStep=s;['sp1','sp2','sp3'].forEach((id,i)=>document.getElementById(id).classList.toggle('active',i+1===s));}
 
@@ -673,6 +689,7 @@ function newQuestion(topic,step){
 }
 
 async function askQuestion(msg){
+  cancelCurrentStream();  // abort any ongoing request first
   clearWelcome();
   appendUserMsg(msg);
   loading=true;document.getElementById('send-btn').disabled=true;
@@ -680,21 +697,21 @@ async function askQuestion(msg){
   // Create streaming bubble
   const streamId='st'+Date.now();
   const streamRow=document.createElement('div');
-  streamRow.id=streamId;
-  streamRow.className='chat-card';
+  streamRow.id=streamId;streamRow.className='chat-card';
   streamRow.innerHTML=`
     <div class="chat-role">🩺 GEMA-MED <span id="stream-dot-${streamId}" style="color:#60A5FA;font-size:11px;font-weight:400">● generando...</span></div>
     <div class="chat-body" id="stream-body-${streamId}" style="font-size:14px;line-height:1.7;white-space:pre-wrap"></div>`;
   document.getElementById('q-area').appendChild(streamRow);
   scrollBottom();
 
+  currentAC=new AbortController();
   let fullText='';
   try{
     const headers={'Content-Type':'application/json'};
     if(token)headers['Authorization']='Bearer '+token;
     const body={message:msg};if(sid)body.session_id=sid;
 
-    const resp=await fetch(API+'/chat/stream',{method:'POST',headers,body:JSON.stringify(body)});
+    const resp=await fetch(API+'/chat/stream',{method:'POST',headers,body:JSON.stringify(body),signal:currentAC.signal});
     if(!resp.ok)throw new Error('HTTP '+resp.status);
 
     const reader=resp.body.getReader();
@@ -707,27 +724,18 @@ async function askQuestion(msg){
       const{done,value}=await reader.read();
       if(done)break;
       buf+=dec.decode(value,{stream:true});
-      // Process complete SSE lines
       let nl;
       while((nl=buf.indexOf('\n\n'))!==-1){
-        const chunk=buf.slice(0,nl).trim();
-        buf=buf.slice(nl+2);
+        const chunk=buf.slice(0,nl).trim();buf=buf.slice(nl+2);
         if(!chunk.startsWith('data: '))continue;
-        const payload=chunk.slice(6);
-        if(payload==='[DONE]')break;
+        const payload=chunk.slice(6);if(payload==='[DONE]')break;
         try{
           const d=JSON.parse(payload);
           if(d.session_id){sid=d.session_id;localStorage.setItem('gema_sid',sid);}
-          if(d.text){
-            fullText+=d.text;
-            if(bodyEl)bodyEl.textContent=fullText;
-            scrollBottom();
-          }
+          if(d.text){fullText+=d.text;if(bodyEl)bodyEl.textContent=fullText;scrollBottom();}
         }catch{}
       }
     }
-
-    // Stream done — remove streaming bubble, render final content
     if(dotEl)dotEl.textContent='';
     streamRow.remove();
     renderResponse(fullText);
@@ -735,9 +743,11 @@ async function askQuestion(msg){
 
   }catch(ex){
     const r=document.getElementById(streamId);if(r)r.remove();
-    appendChatCard('❌ Error: '+ex.message);
+    if(ex.name!=='AbortError')appendChatCard('❌ Error: '+ex.message);
+    // AbortError = user switched topic — no message needed
+  }finally{
+    currentAC=null;loading=false;document.getElementById('send-btn').disabled=false;
   }
-  loading=false;document.getElementById('send-btn').disabled=false;
 }
 
 function sendInput(){
@@ -844,11 +854,11 @@ function selectOpt(cardId,letter){
 
 async function submitOpt(cardId){
   const letter=selectedOpts[cardId];if(!letter)return;
+  cancelCurrentStream();
   document.querySelectorAll(`[id^="opt-${cardId}"]`).forEach(b=>b.classList.add('locked'));
   document.getElementById(`conf-${cardId}`).disabled=true;
   loading=true;document.getElementById('send-btn').disabled=true;
 
-  // Streaming explanation bubble
   const stId='expst'+Date.now();
   const stEl=document.createElement('div');
   stEl.id=stId;stEl.className='chat-card';
@@ -856,11 +866,12 @@ async function submitOpt(cardId){
     <div class="chat-body" id="sb${stId}" style="font-size:14px;line-height:1.7;white-space:pre-wrap"></div>`;
   document.getElementById('q-area').appendChild(stEl);scrollBottom();
 
+  currentAC=new AbortController();
   let fullText='';
   try{
     const headers={'Content-Type':'application/json'};if(token)headers['Authorization']='Bearer '+token;
     const body={message:letter};if(sid)body.session_id=sid;
-    const resp=await fetch(API+'/chat/stream',{method:'POST',headers,body:JSON.stringify(body)});
+    const resp=await fetch(API+'/chat/stream',{method:'POST',headers,body:JSON.stringify(body),signal:currentAC.signal});
     if(!resp.ok)throw new Error('HTTP '+resp.status);
     const reader=resp.body.getReader(),dec=new TextDecoder();
     const bEl=document.getElementById('sb'+stId);
@@ -883,8 +894,12 @@ async function submitOpt(cardId){
     renderExplanation(fullText,cardId,letter);
     bumpStreak();
     await refreshProgress();
-  }catch(ex){const r=document.getElementById(stId);if(r)r.remove();appendChatCard('Error: '+ex.message);}
-  loading=false;document.getElementById('send-btn').disabled=false;
+  }catch(ex){
+    const r=document.getElementById(stId);if(r)r.remove();
+    if(ex.name!=='AbortError')appendChatCard('Error: '+ex.message);
+  }finally{
+    currentAC=null;loading=false;document.getElementById('send-btn').disabled=false;
+  }
 }
 
 let lastExplainText='',lastExplainCardId='';
