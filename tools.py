@@ -33,9 +33,10 @@ TOPIC_KEYWORDS: dict[str, list[str]] = {
 def _load_dataset() -> list:
     global _dataset
     if _dataset is None:
-        print("Loading MedQA dataset from HuggingFace (one-time download ~100 MB)...")
-        from datasets import load_dataset  # lazy import — slow startup if imported at top
-        raw = load_dataset("bigbio/med_qa", "med_qa_en_source", trust_remote_code=True)
+        print("Loading MedQA-USMLE dataset from HuggingFace (one-time ~50 MB)...")
+        from datasets import load_dataset
+        # GBaker/MedQA-USMLE-4-options: parquet format, no scripts, 10k USMLE questions
+        raw = load_dataset("GBaker/MedQA-USMLE-4-options")
         all_splits = []
         for split in raw.values():
             all_splits.extend(list(split))
@@ -85,20 +86,18 @@ def get_usmle_question(topic: str | None = None, step: str | None = None) -> dic
 
     q = random.choice(candidates)
 
+    # GBaker/MedQA-USMLE-4-options format:
+    #   q["question"]        → question text
+    #   q["answer"]          → correct letter "A"/"B"/"C"/"D"
+    #   q["options"]         → {"A": "...", "B": "...", "C": "...", "D": "..."}
+    #   q["answer_idx"]      → same as answer (alias)
     options: dict = q.get("options", {})
-    answer_text: str = q.get("answer", "")
+    correct_letter: str = (q.get("answer") or q.get("answer_idx") or "?").strip().upper()
+    # Ensure letter is just A/B/C/D (strip trailing punctuation)
+    if correct_letter and correct_letter[0] in "ABCDE":
+        correct_letter = correct_letter[0]
+    answer_text = options.get(correct_letter, correct_letter)
 
-    # Resolve correct letter from answer text
-    correct_letter = "?"
-    for letter, text in options.items():
-        if answer_text.strip().lower() == text.strip().lower():
-            correct_letter = letter
-            break
-    # Fallback: answer field sometimes includes letter prefix like "B) ..."
-    if correct_letter == "?" and answer_text and answer_text[0].upper() in "ABCDE":
-        correct_letter = answer_text[0].upper()
-
-    detected_step = _detect_step(q.get("meta_info", ""))
     detected_topic = topic or "general"
     if not topic:
         q_lower = q["question"].lower()
@@ -113,9 +112,9 @@ def get_usmle_question(topic: str | None = None, step: str | None = None) -> dic
         "options": options,
         "correct_answer": answer_text,
         "correct_letter": correct_letter,
-        "step": detected_step,
+        "step": 1,  # GBaker dataset doesn't label by step; default to 1
         "topic": detected_topic,
-        "meta_info": q.get("meta_info", ""),
+        "meta_info": "",
     }
 
 
