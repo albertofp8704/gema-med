@@ -435,8 +435,20 @@ document.addEventListener('DOMContentLoaded',async()=>{
 });
 
 async function loadMe(){
-  try{const r=await api('/me');user=r.user;plan=r.plan;updateUI(r.plan,r.progress);show(r.plan?.has_plan?'app':'plan');}
-  catch{localStorage.removeItem('gema_token');token=null;show('auth');}
+  try{
+    const r=await api('/me');user=r.user;plan=r.plan;updateUI(r.plan,r.progress);
+    show(r.plan?.has_plan?'app':'plan');
+  }catch(e){
+    // Solo cerrar sesión si el token es inválido/expirado (401)
+    // Errores de red (status 0, 5xx) mantienen la sesión para reintentar
+    if(e.status===401){
+      localStorage.removeItem('gema_token');localStorage.removeItem('gema_sid');
+      token=null;sid=null;show('auth');
+    } else {
+      // Error de red o servidor: mantener token, mostrar app con datos en caché si hay
+      if(user){show('app');}else{show('auth');}
+    }
+  }
 }
 
 function show(s){
@@ -807,30 +819,16 @@ async function refreshProgress(){
   try{const r=await api('/me');updateUI(r.plan,r.progress);}catch{}
 }
 
-// API
+// API — throws {message, status} so callers can distinguish 401 vs network error
 async function api(path,opts={}){
   const h={'Content-Type':'application/json'};if(token)h['Authorization']='Bearer '+token;
-  const r=await fetch(API+path,{method:opts.method||'GET',headers:h,body:opts.body?JSON.stringify(opts.body):undefined});
+  let r;
+  try{r=await fetch(API+path,{method:opts.method||'GET',headers:h,body:opts.body?JSON.stringify(opts.body):undefined});}
+  catch(e){const err=new Error('Sin conexión');err.status=0;throw err;}
   const d=await r.json().catch(()=>({}));
-  if(!r.ok)throw new Error(d.detail||`Error ${r.status}`);return d;
+  if(!r.ok){const err=new Error(d.detail||`Error ${r.status}`);err.status=r.status;throw err;}
+  return d;
 }
-
-// Initialize app on page load
-async function init(){
-  if(token){
-    try{
-      const me=await api('/me');user=me.user;show('app');loadHome();
-    }catch{
-      token=null;localStorage.removeItem('gema_token');show('auth');
-    }
-  }else{
-    show('auth');
-  }
-}
-
-// Run on page load
-window.addEventListener('DOMContentLoaded',init);
-init();
 </script>
 </body>
 </html>
