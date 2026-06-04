@@ -3,11 +3,6 @@ GEMA-MED — Agent con OpenAI SDK (compatible con Groq).
 
 LLM gratuito: Groq + llama-3.3-70b-versatile (14,400 req/día free tier)
 Obtén tu key GRATIS en: https://console.groq.com (sin tarjeta)
-
-Variables de entorno:
-    GROQ_API_KEY   = tu key de Groq (requerido)
-    LLM_MODEL      = modelo a usar (default: llama-3.3-70b-versatile)
-    LLM_BASE_URL   = base URL (default: Groq)
 """
 
 import os
@@ -16,7 +11,10 @@ from openai import AsyncOpenAI
 
 from prompts import SYSTEM_PROMPT
 from tools import get_usmle_question, search_pubmed
-from db import save_result, get_progress
+from db import (
+    save_result, get_progress, get_weakness_report,
+    set_study_plan, get_study_plan, update_study_phase,
+)
 
 client = AsyncOpenAI(
     api_key=os.getenv("GROQ_API_KEY", ""),
@@ -31,15 +29,15 @@ TOOLS = [
         "function": {
             "name": "get_usmle_question",
             "description": (
-                "Obtiene una pregunta USMLE real del banco MedQA (12,723 preguntas). "
-                "Úsalo SIEMPRE que el usuario pida una pregunta, quiz, o práctica."
+                "Obtiene una pregunta USMLE real del banco MedQA (10,000+ preguntas). "
+                "Úsalo SIEMPRE que el usuario pida una pregunta, quiz, práctica, diagnóstico o simulacro."
             ),
             "parameters": {
                 "type": "object",
                 "properties": {
                     "topic": {
                         "type": "string",
-                        "description": "Tema médico para filtrar",
+                        "description": "Tema médico para filtrar (omitir para preguntas mixtas en simulacro/diagnóstico)",
                         "enum": [
                             "cardiology", "pulmonology", "nephrology", "neurology",
                             "gastroenterology", "endocrinology", "hematology",
@@ -49,7 +47,7 @@ TOOLS = [
                     },
                     "step": {
                         "type": "string",
-                        "description": "Nivel de USMLE Step",
+                        "description": "Nivel USMLE",
                         "enum": ["step1", "step2", "step3"],
                     },
                 },
@@ -60,14 +58,11 @@ TOOLS = [
         "type": "function",
         "function": {
             "name": "search_pubmed",
-            "description": "Busca referencias clínicas en PubMed para respaldar explicaciones médicas.",
+            "description": "Busca referencias clínicas en PubMed para respaldar explicaciones.",
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "query": {
-                        "type": "string",
-                        "description": "Consulta médica a buscar en PubMed",
-                    }
+                    "query": {"type": "string", "description": "Consulta médica"},
                 },
                 "required": ["query"],
             },
@@ -77,13 +72,13 @@ TOOLS = [
         "type": "function",
         "function": {
             "name": "save_result",
-            "description": "Guarda el resultado de la respuesta del usuario para tracking de progreso.",
+            "description": "Guarda el resultado de una respuesta para tracking de progreso.",
             "parameters": {
                 "type": "object",
                 "properties": {
                     "question_id": {"type": "string"},
                     "topic":       {"type": "string"},
-                    "step":        {"type": "integer", "description": "1, 2 o 3"},
+                    "step":        {"type": "integer"},
                     "correct":     {"type": "boolean"},
                 },
                 "required": ["question_id", "topic", "step", "correct"],
@@ -94,8 +89,77 @@ TOOLS = [
         "type": "function",
         "function": {
             "name": "get_progress",
-            "description": "Obtiene las estadísticas de rendimiento del usuario en esta sesión.",
+            "description": "Obtiene estadísticas de rendimiento del usuario: total de preguntas, precisión por tema, progreso del día.",
             "parameters": {"type": "object", "properties": {}},
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_weakness_report",
+            "description": "Identifica los sistemas con accuracy < 60% (debilidades) para priorizar revisión.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "threshold": {
+                        "type": "number",
+                        "description": "Umbral de accuracy para considerar debilidad (default: 60)",
+                    },
+                },
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "set_study_plan",
+            "description": (
+                "Guarda el plan de estudio del usuario. "
+                "Úsalo cuando el usuario diga su fecha objetivo de examen."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "target_date": {
+                        "type": "string",
+                        "description": "Fecha objetivo en formato YYYY-MM-DD",
+                    },
+                    "daily_goal": {
+                        "type": "integer",
+                        "description": "Preguntas por día (default: 40)",
+                    },
+                    "current_system": {
+                        "type": "string",
+                        "description": "Sistema de inicio (default: cardiology)",
+                    },
+                },
+                "required": ["target_date"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_study_plan",
+            "description": "Recupera el plan de estudio guardado: fecha objetivo, sistema actual, semanas restantes, cronograma.",
+            "parameters": {"type": "object", "properties": {}},
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "update_study_phase",
+            "description": "Actualiza el sistema o fase actual del plan de estudio.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "current_system": {"type": "string"},
+                    "current_phase": {
+                        "type": "string",
+                        "enum": ["planning", "diagnostic", "systems", "review", "simulation", "final"],
+                    },
+                },
+            },
         },
     },
 ]
@@ -121,14 +185,12 @@ async def run_agent(session_id: str, history: list[dict], user_message: str) -> 
         msg    = choice.message
 
         if choice.finish_reason == "tool_calls" and msg.tool_calls:
-            # Agrega la respuesta del asistente con sus tool calls
             messages.append({
                 "role":       "assistant",
                 "content":    msg.content,
                 "tool_calls": [tc.model_dump() for tc in msg.tool_calls],
             })
 
-            # Ejecuta cada tool call y agrega el resultado
             for tc in msg.tool_calls:
                 args   = json.loads(tc.function.arguments)
                 result = await _dispatch(tc.function.name, args, session_id)
@@ -165,5 +227,27 @@ async def _dispatch(name: str, inputs: dict, session_id: str) -> dict:
 
     if name == "get_progress":
         return get_progress(session_id)
+
+    if name == "get_weakness_report":
+        return get_weakness_report(session_id, threshold=inputs.get("threshold", 60.0))
+
+    if name == "set_study_plan":
+        return set_study_plan(
+            user_id=session_id,
+            target_date=inputs["target_date"],
+            daily_goal=inputs.get("daily_goal", 40),
+            current_system=inputs.get("current_system", "cardiology"),
+            current_phase="diagnostic",
+        )
+
+    if name == "get_study_plan":
+        return get_study_plan(session_id)
+
+    if name == "update_study_phase":
+        return update_study_phase(
+            user_id=session_id,
+            current_system=inputs.get("current_system"),
+            current_phase=inputs.get("current_phase"),
+        )
 
     return {"error": f"Unknown tool: {name}"}
