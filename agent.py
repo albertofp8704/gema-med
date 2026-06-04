@@ -188,8 +188,10 @@ async def run_agent(session_id: str, history: list[dict], user_message: str) -> 
                 max_tokens=2048,
             )
         except Exception as e:
+            print(f"[AGENT ERROR] {type(e).__name__}: {e}")
             # Groq tool-call format errors: retry without tools
-            if "tool" in str(e).lower() or "400" in str(e):
+            err_str = str(e)
+            if "tool" in err_str.lower() or "400" in err_str:
                 try:
                     fallback = await client.chat.completions.create(
                         model=MODEL,
@@ -204,10 +206,10 @@ async def run_agent(session_id: str, history: list[dict], user_message: str) -> 
                     text = fallback.choices[0].message.content or ""
                     history.append({"role": "assistant", "content": text})
                     return text
-                except Exception:
-                    pass
-            history.append({"role": "assistant", "content": f"Error temporal del modelo. Intenta de nuevo."})
-            return "Error temporal. Por favor intenta de nuevo."
+                except Exception as fe:
+                    print(f"[FALLBACK ERROR] {type(fe).__name__}: {fe}")
+            history.append({"role": "assistant", "content": f"Error: {err_str[:200]}"})
+            return f"Error del agente: {err_str[:200]}"
 
         choice = response.choices[0]
         msg    = choice.message
