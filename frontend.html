@@ -553,7 +553,7 @@ const WEEKS = {
 let token=localStorage.getItem('gema_token')||null, user=null, plan=null, sid=localStorage.getItem('gema_sid')||null;
 let activeTopic='', activeStep=1, loading=false;
 let currentAC=null;  // AbortController for active stream — cancel before starting new one
-let activeLang=localStorage.getItem('gema_lang')||'bilingual'; // "es"|"en"|"bilingual"
+let activeLang=localStorage.getItem('gema_lang')||'en'; // "en" default — USMLE is in English
 const questionRawData = {};  // cardId → raw question text (avoids onclick injection bug)
 
 function cancelCurrentStream(){
@@ -987,9 +987,9 @@ async function refreshProgress(){
 
 // ── LANGUAGE ────────────────────────────────────────────────────────────────
 const LANG_OPTS=[
-  {val:'bilingual',label:'🌐',title:'Bilingüe — el modelo responde en tu idioma'},
-  {val:'es',       label:'🇪🇸',title:'Español — todas las respuestas en español'},
-  {val:'en',       label:'🇺🇸',title:'English — all responses in English'},
+  {val:'en',       label:'🇺🇸',title:'English — USMLE exam language (default)'},
+  {val:'es',       label:'🇪🇸',title:'Español — explicaciones en español'},
+  {val:'bilingual',label:'🌐', title:'Bilingüe — preguntas en inglés, explicaciones en español'},
 ];
 function updateLangBtn(){
   const opt=LANG_OPTS.find(o=>o.val===activeLang)||LANG_OPTS[0];

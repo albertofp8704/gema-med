@@ -257,9 +257,9 @@ async def _dispatch_tool(name: str, inputs: dict, session_id: str) -> dict:
 # ── Streaming entry point ─────────────────────────────────────────────────────
 
 _LANG_INSTRUCTIONS = {
-    "es":       "\n\nIDIOMA OBLIGATORIO: Responde SIEMPRE en español. Preguntas, opciones y explicaciones en español.",
-    "en":       "\n\nMANDATORY LANGUAGE: Always respond in English. Questions, options and explanations in English.",
-    "bilingual": "",   # model follows user's language
+    "en":        "\n\nMANDATORY LANGUAGE: Always respond in English. Questions, answer choices, and explanations must be in English. This mirrors the real USMLE exam.",
+    "es":        "\n\nIDIOMA OBLIGATORIO: Responde SIEMPRE en español. Preguntas, opciones y explicaciones en español.",
+    "bilingual": "\n\nBILINGUAL MODE: Present questions and answer choices in English (as in the real USMLE). Write explanations, educational objectives, and high-yield points in Spanish to help Cuban graduates understand better.",
 }
 
 async def run_agent_stream(session_id: str, history: list[dict], user_message: str,
