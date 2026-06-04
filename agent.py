@@ -67,6 +67,9 @@ async def _fast_question(session_id: str, history: list, topic: str | None, step
     q = get_usmle_question(topic=topic, step=step)
     _session_last_question[session_id] = q  # store for save_result after answer
 
+    display_topic = (topic or q["topic"]).replace("_", " ").title()
+    step_num = step.replace("step","") if step else "1"
+
     opts_text = "\n".join(f"{k}) {v}" for k, v in q["options"].items())
     q_block = (
         f"PREGUNTA DISPONIBLE (ID: {q['id']} | Tema: {q['topic']} | Source: {q['source']}):\n"
@@ -78,8 +81,10 @@ async def _fast_question(session_id: str, history: list, topic: str | None, step
     system = (
         SYSTEM_PROMPT.replace("{session_id}", session_id)
         + f"\n\n---\n{q_block}\n---\n"
-        + "INSTRUCCIÓN: Presenta la pregunta anterior usando el formato UWorld exacto. "
-        + "NO reveles la respuesta correcta. Termina con '*(Escribe tu respuesta: A, B, C o D)*'"
+        + f"INSTRUCCION: Presenta la pregunta usando el formato UWorld exacto. "
+        + f"El encabezado DEBE ser exactamente: '**USMLE Step {step_num} -- {display_topic}**'. "
+        + "NO cambies el tema del encabezado. NO reveles la respuesta correcta. "
+        + "Termina con '*(Escribe tu respuesta: A, B, C o D)*'"
     )
 
     resp = await client.chat.completions.create(
@@ -269,6 +274,10 @@ async def run_agent_stream(session_id: str, history: list[dict], user_message: s
             q = get_usmle_question(topic=topic, step=step)
             _session_last_question[session_id] = q
 
+            # Use the REQUESTED topic as the display label (not Groq's guess)
+            display_topic = (topic or q["topic"]).replace("_", " ").title()
+            step_num = step.replace("step","") if step else "1"
+
             opts_text = "\n".join(f"{k}) {v}" for k, v in q["options"].items())
             q_block = (
                 f"\n\nPREGUNTA (ID:{q['id']} | Tema:{q['topic']}):\n"
@@ -278,8 +287,10 @@ async def run_agent_stream(session_id: str, history: list[dict], user_message: s
             )
             system = (
                 SYSTEM_PROMPT.replace("{session_id}", session_id) + q_block
-                + "\n\nINSTRUCCIÓN: Presenta la pregunta en formato UWorld exacto. "
-                + "NO reveles la respuesta. Termina con '*(Escribe tu respuesta: A, B, C o D)*'"
+                + f"\n\nINSTRUCCIÓN: Presenta la pregunta en formato UWorld exacto. "
+                + f"El encabezado DEBE ser exactamente: '**USMLE Step {step_num} — {display_topic}**'. "
+                + "NO cambies el tema del encabezado. NO reveles la respuesta. "
+                + "Termina con '*(Escribe tu respuesta: A, B, C o D)*'"
             )
             stream = await client.chat.completions.create(
                 model=MODEL,

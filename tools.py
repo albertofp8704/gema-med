@@ -87,18 +87,23 @@ def _question_id(text: str) -> str:
 
 
 def _detect_topic_by_keywords(question: str) -> str:
+    """Score-based topic detection: returns topic with MOST keyword matches, not first match."""
     q = question.lower()
+    scores: dict[str, int] = {}
     for topic, kws in TOPIC_KEYWORDS.items():
-        if any(kw in q for kw in kws):
-            return topic
-    return "general"
+        score = sum(1 for kw in kws if kw in q)
+        if score > 0:
+            scores[topic] = score
+    if not scores:
+        return "general"
+    return max(scores, key=lambda t: scores[t])
 
 
 # ── Loaders ───────────────────────────────────────────────────────────────────
 
 def _load_gbaker() -> list[dict]:
     """GBaker/MedQA-USMLE-4-options — 10,178 preguntas USMLE. Parquet, sin scripts."""
-    print("  → GBaker/MedQA-USMLE-4-options ...")
+    print("  -> GBaker/MedQA-USMLE-4-options ...")
     from datasets import load_dataset
     raw = load_dataset("GBaker/MedQA-USMLE-4-options")
 
@@ -128,7 +133,7 @@ def _load_medmcqa(max_questions: int = 100_000) -> list[dict]:
     openlifescienceai/medmcqa — 183k preguntas de exámenes médicos reales.
     Limitamos a max_questions para controlar uso de RAM en Railway.
     """
-    print("  → openlifescienceai/medmcqa ...")
+    print("  -> openlifescienceai/medmcqa ...")
     from datasets import load_dataset
     raw = load_dataset("openlifescienceai/medmcqa", split="train")
 
@@ -187,7 +192,7 @@ def _load_dataset() -> list[dict]:
         combined = gbaker + medmcqa
         random.shuffle(combined)          # mezclar fuentes
         _dataset = combined
-        print(f"✅ Banco cargado: {len(_dataset):,} preguntas totales "
+        print(f"OK Banco cargado: {len(_dataset):,} preguntas totales "
               f"(MedQA: {len(gbaker):,} · MedMCQA: {len(medmcqa):,})")
     return _dataset
 
