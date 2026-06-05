@@ -229,6 +229,40 @@ body{font-family:'Inter',sans-serif;background:var(--page);color:var(--text);hei
 
 ::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:#CBD5E1;border-radius:3px}
 
+/* ── TUTOR FAB ── */
+.tutor-fab{position:fixed;bottom:88px;right:24px;z-index:500;display:flex;flex-direction:column;align-items:flex-end;gap:10px;}
+#fab-btn{width:54px;height:54px;border-radius:50%;background:var(--blue);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:24px;box-shadow:0 4px 20px rgba(27,94,190,.4);transition:all .2s;position:relative;}
+#fab-btn:hover{background:var(--blue-h);transform:scale(1.08);box-shadow:0 6px 24px rgba(27,94,190,.5);}
+#fab-btn.open{background:#1E3A5F;transform:rotate(0deg);}
+@keyframes fab-pulse{0%,100%{box-shadow:0 4px 20px rgba(27,94,190,.4)}50%{box-shadow:0 4px 28px rgba(27,94,190,.7)}}
+.fab-dot{position:absolute;top:4px;right:4px;width:10px;height:10px;background:#10B981;border-radius:50%;border:2px solid #fff;animation:fab-pulse 2s infinite;}
+
+/* Mini-chat popup */
+.tutor-popup{width:340px;background:#fff;border-radius:16px;box-shadow:0 8px 40px rgba(0,0,0,.18);border:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;max-height:420px;transition:all .25s cubic-bezier(.4,0,.2,1);transform-origin:bottom right;}
+.tutor-popup.hidden{opacity:0;transform:scale(.85) translateY(12px);pointer-events:none;}
+.tp-header{background:var(--header);padding:12px 16px;display:flex;align-items:center;gap:10px;flex-shrink:0;}
+.tp-avatar{width:34px;height:34px;border-radius:50%;background:var(--blue);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;}
+.tp-info{flex:1;}
+.tp-name{font-size:13px;font-weight:700;color:#fff;}
+.tp-status{font-size:10px;color:#60A5FA;display:flex;align-items:center;gap:4px;}
+.tp-status::before{content:'';width:6px;height:6px;background:#10B981;border-radius:50%;display:inline-block;}
+.tp-close{background:none;border:none;color:rgba(255,255,255,.5);font-size:18px;cursor:pointer;line-height:1;}
+.tp-close:hover{color:#fff;}
+.tp-messages{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:8px;min-height:120px;}
+.tp-msg{max-width:85%;font-size:13px;line-height:1.5;padding:8px 12px;border-radius:10px;}
+.tp-msg.bot{background:#F1F5F9;color:var(--text);align-self:flex-start;border-radius:4px 10px 10px 10px;}
+.tp-msg.user{background:var(--blue);color:#fff;align-self:flex-end;border-radius:10px 10px 4px 10px;}
+.tp-msg.typing{background:#F1F5F9;color:#9CA3AF;align-self:flex-start;}
+.tp-quick{display:flex;flex-wrap:wrap;gap:5px;padding:0 12px 8px;}
+.tp-chip{background:var(--blue-lt);color:var(--blue);border:none;border-radius:20px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:inherit;transition:all .15s;white-space:nowrap;}
+.tp-chip:hover{background:var(--blue);color:#fff;}
+.tp-input-row{display:flex;gap:6px;padding:10px 12px;border-top:1px solid var(--border);flex-shrink:0;}
+#tp-input{flex:1;border:1.5px solid var(--border);border-radius:8px;padding:7px 10px;font-size:13px;font-family:inherit;outline:none;resize:none;transition:border .15s;}
+#tp-input:focus{border-color:var(--blue);}
+#tp-send{background:var(--blue);color:#fff;border:none;border-radius:8px;padding:7px 12px;font-size:13px;cursor:pointer;font-family:inherit;}
+#tp-send:hover{background:var(--blue-h);}
+#tp-send:disabled{background:#93C5FD;}
+
 /* ── HEADER TOOLS ── */
 .hdr-tools{display:flex;align-items:center;gap:2px;padding:0 10px;border-left:1px solid rgba(255,255,255,.1);}
 .hdr-tool-btn{position:relative;background:none;border:none;color:rgba(255,255,255,.5);cursor:pointer;height:30px;min-width:30px;padding:0 5px;border-radius:7px;display:inline-flex;align-items:center;justify-content:center;gap:3px;font-size:15px;transition:all .15s;font-family:inherit;white-space:nowrap;}
@@ -493,6 +527,38 @@ body{font-family:'Inter',sans-serif;background:var(--page);color:var(--text);hei
   </div>
 </div>
 
+<!-- ── TUTOR FAB ── -->
+<div class="tutor-fab" id="tutor-fab" style="display:none">
+  <!-- Popup -->
+  <div class="tutor-popup hidden" id="tutor-popup">
+    <div class="tp-header">
+      <div class="tp-avatar">🩺</div>
+      <div class="tp-info">
+        <div class="tp-name">GEMA-MED Tutor</div>
+        <div class="tp-status">En línea — listo para ayudar</div>
+      </div>
+      <button class="tp-close" onclick="closeTutor()">×</button>
+    </div>
+    <div class="tp-messages" id="tp-messages">
+      <div class="tp-msg bot">¡Hola! 👋 Soy tu tutor USMLE. ¿En qué puedo ayudarte?</div>
+    </div>
+    <div class="tp-quick" id="tp-quick">
+      <button class="tp-chip" onclick="tutorAsk('Explain the last question')">🔍 Explain last Q</button>
+      <button class="tp-chip" onclick="tutorAsk('Give me a high-yield mnemonic')">🧠 Mnemonic</button>
+      <button class="tp-chip" onclick="tutorAsk('What are my weak topics?')">📊 My weaknesses</button>
+      <button class="tp-chip" onclick="tutorAsk('Summarize this topic')">📋 Summary</button>
+    </div>
+    <div class="tp-input-row">
+      <textarea id="tp-input" rows="1" placeholder="Ask the tutor..."></textarea>
+      <button id="tp-send" onclick="tutorSend()">↑</button>
+    </div>
+  </div>
+  <!-- FAB button -->
+  <button id="fab-btn" onclick="toggleTutor()" title="Tutor GEMA-MED">
+    🩺<span class="fab-dot"></span>
+  </button>
+</div>
+
 <!-- ── BACKDROP ── -->
 <div class="drawer-backdrop" id="drawer-backdrop" onclick="closeAllDrawers()"></div>
 
@@ -567,6 +633,8 @@ document.addEventListener('DOMContentLoaded',async()=>{
   document.getElementById('p-date').min=new Date().toISOString().split('T')[0];
   document.getElementById('chat-input').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendInput();}});
   document.getElementById('chat-input').addEventListener('input',autosize);
+  document.getElementById('tp-input').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();tutorSend();}});
+  document.getElementById('tp-input').addEventListener('input',function(){this.style.height='auto';this.style.height=Math.min(this.scrollHeight,80)+'px';});
   updateWeeks(); previewWeek();
   initStreak(); updateFcBadge(); updateFlagBadge(); updateLangBtn();
   if(token){await loadMe();}else{show('auth');}
@@ -593,6 +661,8 @@ function show(s){
   document.getElementById('auth-overlay').classList.toggle('hidden',s!=='auth');
   document.getElementById('plan-overlay').classList.toggle('hidden',s!=='plan');
   document.getElementById('app').classList.toggle('hidden',s!=='app');
+  // Show FAB only when app is visible
+  if(s==='app')showFab();
 }
 
 // AUTH
@@ -983,6 +1053,82 @@ function autosize(){const el=document.getElementById('chat-input');el.style.heig
 async function refreshProgress(){
   if(!token)return;
   try{const r=await api('/me');updateUI(r.plan,r.progress);}catch{}
+}
+
+// ── TUTOR FAB ───────────────────────────────────────────────────────────────
+let tutorOpen=false,tutorBusy=false;
+
+function showFab(){document.getElementById('tutor-fab').style.display='flex';}
+
+function toggleTutor(){
+  tutorOpen=!tutorOpen;
+  document.getElementById('tutor-popup').classList.toggle('hidden',!tutorOpen);
+  document.getElementById('fab-btn').classList.toggle('open',tutorOpen);
+  if(tutorOpen)setTimeout(()=>document.getElementById('tp-input').focus(),200);
+}
+function closeTutor(){tutorOpen=false;document.getElementById('tutor-popup').classList.add('hidden');document.getElementById('fab-btn').classList.remove('open');}
+
+function tpAppend(text,role){
+  const el=document.createElement('div');
+  el.className=`tp-msg ${role}`;el.textContent=text;
+  document.getElementById('tp-messages').appendChild(el);
+  document.getElementById('tp-messages').scrollTop=9999;
+  return el;
+}
+
+async function tutorSend(){
+  const inp=document.getElementById('tp-input');
+  const msg=inp.value.trim();if(!msg||tutorBusy)return;
+  inp.value='';inp.style.height='auto';
+  await tutorAsk(msg);
+}
+
+async function tutorAsk(msg){
+  if(tutorBusy)return;
+  tutorBusy=true;
+  document.getElementById('tp-quick').style.display='none';
+  document.getElementById('tp-send').disabled=true;
+
+  tpAppend(msg,'user');
+
+  // Typing indicator
+  const typing=document.createElement('div');
+  typing.className='tp-msg typing';typing.textContent='● ● ●';
+  document.getElementById('tp-messages').appendChild(typing);
+  document.getElementById('tp-messages').scrollTop=9999;
+
+  try{
+    const headers={'Content-Type':'application/json'};
+    if(token)headers['Authorization']='Bearer '+token;
+    const body={message:msg,language:activeLang};if(sid)body.session_id=sid;
+    const resp=await fetch(API+'/chat/stream',{method:'POST',headers,body:JSON.stringify(body)});
+    if(!resp.ok)throw new Error('HTTP '+resp.status);
+
+    const reader=resp.body.getReader(),dec=new TextDecoder();
+    let buf='',full='';
+    typing.remove();
+    const botEl=tpAppend('','bot');
+
+    while(true){
+      const{done,value}=await reader.read();if(done)break;
+      buf+=dec.decode(value,{stream:true});
+      let nl;
+      while((nl=buf.indexOf('\n\n'))!==-1){
+        const chunk=buf.slice(0,nl).trim();buf=buf.slice(nl+2);
+        if(!chunk.startsWith('data:'))continue;
+        const payload=chunk.slice(5).trim();if(payload==='[DONE]')break;
+        try{const d=JSON.parse(payload);
+          if(d.session_id){sid=d.session_id;localStorage.setItem('gema_sid',sid);}
+          if(d.text){full+=d.text;botEl.textContent=full;document.getElementById('tp-messages').scrollTop=9999;}
+        }catch{}
+      }
+    }
+  }catch(ex){
+    typing.remove();
+    tpAppend('Error connecting. Try again.','bot');
+  }
+  tutorBusy=false;
+  document.getElementById('tp-send').disabled=false;
 }
 
 // ── LANGUAGE ────────────────────────────────────────────────────────────────
