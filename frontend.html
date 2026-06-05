@@ -1064,9 +1064,24 @@ function toggleTutor(){
   tutorOpen=!tutorOpen;
   document.getElementById('tutor-popup').classList.toggle('hidden',!tutorOpen);
   document.getElementById('fab-btn').classList.toggle('open',tutorOpen);
-  if(tutorOpen)setTimeout(()=>document.getElementById('tp-input').focus(),200);
+  if(tutorOpen){
+    setTimeout(()=>document.getElementById('tp-input').focus(),200);
+    // Close on outside click
+    setTimeout(()=>document.addEventListener('click',tutorOutsideClick),50);
+  }else{
+    document.removeEventListener('click',tutorOutsideClick);
+  }
 }
-function closeTutor(){tutorOpen=false;document.getElementById('tutor-popup').classList.add('hidden');document.getElementById('fab-btn').classList.remove('open');}
+function tutorOutsideClick(e){
+  const fab=document.getElementById('tutor-fab');
+  if(fab&&!fab.contains(e.target)){closeTutor();}
+}
+function closeTutor(){
+  tutorOpen=false;
+  document.getElementById('tutor-popup').classList.add('hidden');
+  document.getElementById('fab-btn').classList.remove('open');
+  document.removeEventListener('click',tutorOutsideClick);
+}
 
 function tpAppend(text,role){
   const el=document.createElement('div');
