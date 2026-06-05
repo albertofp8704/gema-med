@@ -85,13 +85,18 @@ async def _fast_question(session_id: str, history: list, topic: str | None, step
     return _format_question(q, display_topic, step_num)
 
 
+def _trim_history(history: list, keep_last: int = 10) -> list:
+    """Keep only the last N messages to stay within Groq TPM limits."""
+    return history[-keep_last:] if len(history) > keep_last else history
+
+
 async def _fast_explanation(session_id: str, history: list, letter: str) -> str:
-    """1 Groq call con contexto completo de la conversación para generar explicación."""
+    """1 Groq call — solo últimos 10 mensajes para evitar 413 TPM."""
     resp = await client.chat.completions.create(
         model=MODEL,
         messages=[
             {"role": "system", "content": SYSTEM_PROMPT.replace("{session_id}", session_id)},
-            *history,
+            *_trim_history(history),
         ],
         max_tokens=MAX_TOKENS,
         temperature=0.2,
@@ -105,7 +110,7 @@ async def _fast_general(session_id: str, history: list) -> str:
         model=MODEL,
         messages=[
             {"role": "system", "content": SYSTEM_PROMPT.replace("{session_id}", session_id)},
-            *history,
+            *_trim_history(history),
         ],
         max_tokens=MAX_TOKENS,
         temperature=0.3,
@@ -286,7 +291,7 @@ async def run_agent_stream(session_id: str, history: list[dict], user_message: s
                 model=MODEL,
                 messages=[
                     {"role": "system", "content": SYSTEM_PROMPT.replace("{session_id}", session_id) + lang_note},
-                    *history,
+                    *_trim_history(history),
                 ],
                 stream=True, max_tokens=MAX_TOKENS, temperature=0.2,
             )
@@ -302,7 +307,7 @@ async def run_agent_stream(session_id: str, history: list[dict], user_message: s
                 model=MODEL,
                 messages=[
                     {"role": "system", "content": SYSTEM_PROMPT.replace("{session_id}", session_id) + lang_note},
-                    *history,
+                    *_trim_history(history),
                 ],
                 stream=True, max_tokens=MAX_TOKENS, temperature=0.3,
             )
