@@ -37,6 +37,43 @@ results_tbl = sa.Table(
     sa.Column("timestamp",   sa.String,  nullable=False),
 )
 
+# ── Tabla: content validation pipeline ───────────────────────────────────────
+
+content_items_tbl = sa.Table(
+    "content_items", metadata,
+    sa.Column("id",             sa.String,  primary_key=True),
+    sa.Column("content_type",   sa.String,  nullable=False),          # question|explanation|general
+    sa.Column("topic",          sa.String,  nullable=True),
+    sa.Column("content",        sa.Text,    nullable=False),           # stem or text
+    sa.Column("choices",        sa.Text,    nullable=True),            # JSON
+    sa.Column("correct_answer", sa.String,  nullable=True),
+    sa.Column("explanation",    sa.Text,    nullable=True),
+    sa.Column("source_url",     sa.String,  nullable=True),
+    sa.Column("source_type",    sa.String,  nullable=True),
+    sa.Column("risk_level",     sa.String,  default="low"),
+    sa.Column("status",         sa.String,  default="draft", index=True),
+    sa.Column("validation_report", sa.Text, nullable=True),           # JSON
+    sa.Column("submitted_by",   sa.String,  nullable=True),
+    sa.Column("reviewed_by",    sa.String,  nullable=True),
+    sa.Column("review_notes",   sa.Text,    nullable=True),
+    sa.Column("version",        sa.Integer, default=1),
+    sa.Column("created_at",     sa.String,  nullable=False),
+    sa.Column("updated_at",     sa.String,  nullable=False),
+    sa.Column("last_verified_at", sa.String, nullable=True),
+)
+
+content_audit_tbl = sa.Table(
+    "content_audit", metadata,
+    sa.Column("id",          sa.Integer, primary_key=True, autoincrement=True),
+    sa.Column("item_id",     sa.String,  nullable=False, index=True),
+    sa.Column("action",      sa.String,  nullable=False),             # submitted|validated|approved|rejected|archived
+    sa.Column("from_status", sa.String,  nullable=True),
+    sa.Column("to_status",   sa.String,  nullable=True),
+    sa.Column("actor",       sa.String,  nullable=True),              # user_id or "system"
+    sa.Column("notes",       sa.Text,    nullable=True),
+    sa.Column("timestamp",   sa.String,  nullable=False),
+)
+
 # ── Tabla: planes de estudio ──────────────────────────────────────────────────
 
 study_plans_tbl = sa.Table(
@@ -112,6 +149,168 @@ def get_week_detail(plan_type: str, week: int) -> dict:
     template = PLAN_TEMPLATES.get(plan_type, TWELVE_WEEK_PLAN)
     week = max(1, min(week, len(template)))
     return template[week - 1]
+
+
+# ── Funciones: content validation pipeline ───────────────────────────────────
+
+def submit_content_item(item: dict, submitted_by: str = "system") -> dict:
+    """Submit a content item through the validation pipeline."""
+    import json as _json
+    from validation import run_validation_pipeline, ContentType
+    now = datetime.now().isoformat()
+
+    # Detect content type
+    ct = ContentType(item.get("content_type", "explanation"))
+
+    # Run automatic validation
+    report = run_validation_pipeline(item, ct, submitted_by)
+    item_id = report["id"]
+
+    with engine.begin() as conn:
+        # Check if already exists (update version)
+        existing = conn.execute(
+            sa.select(content_items_tbl.c.version)
+            .where(content_items_tbl.c.id == item_id)
+        ).fetchone()
+
+        if existing:
+            version = existing.version + 1
+            conn.execute(
+                content_items_tbl.update()
+                .where(content_items_tbl.c.id == item_id)
+                .values(
+                    status=report["final_status"],
+                    risk_level=report["risk_level"],
+                    validation_report=_json.dumps(report),
+                    version=version,
+                    updated_at=now,
+                )
+            )
+        else:
+            version = 1
+            conn.execute(content_items_tbl.insert().values(
+                id=item_id,
+                content_type=ct.value,
+                topic=item.get("topic"),
+                content=item.get("content") or item.get("stem", ""),
+                choices=_json.dumps(item.get("choices")) if item.get("choices") else None,
+                correct_answer=item.get("correct_answer"),
+                explanation=item.get("explanation"),
+                source_url=item.get("source_url") or item.get("source"),
+                source_type=item.get("source_type"),
+                risk_level=report["risk_level"],
+                status=report["final_status"],
+                validation_report=_json.dumps(report),
+                submitted_by=submitted_by,
+                version=1,
+                created_at=now,
+                updated_at=now,
+            ))
+
+        # Audit log
+        conn.execute(content_audit_tbl.insert().values(
+            item_id=item_id,
+            action="submitted",
+            from_status="draft",
+            to_status=report["final_status"],
+            actor=submitted_by,
+            notes=f"Auto-validation: {len(report['errors'])} errors, risk={report['risk_level']}",
+            timestamp=now,
+        ))
+
+    return {**report, "version": version}
+
+
+def review_content_item(
+    item_id: str,
+    decision: str,          # "approved" | "rejected"
+    reviewed_by: str,
+    notes: str = "",
+) -> dict:
+    """Human review decision — only humans can approve or reject."""
+    if decision not in ("approved", "rejected"):
+        raise ValueError("decision must be 'approved' or 'rejected'")
+
+    now = datetime.now().isoformat()
+    with engine.begin() as conn:
+        row = conn.execute(
+            sa.select(content_items_tbl)
+            .where(content_items_tbl.c.id == item_id)
+        ).fetchone()
+
+        if not row:
+            raise ValueError(f"Content item '{item_id}' not found")
+
+        if row.status == "approved" and decision == "approved":
+            return {"message": "Already approved", "status": "approved"}
+
+        old_status = row.status
+        conn.execute(
+            content_items_tbl.update()
+            .where(content_items_tbl.c.id == item_id)
+            .values(
+                status=decision,
+                reviewed_by=reviewed_by,
+                review_notes=notes,
+                last_verified_at=now,
+                updated_at=now,
+            )
+        )
+        conn.execute(content_audit_tbl.insert().values(
+            item_id=item_id,
+            action=decision,
+            from_status=old_status,
+            to_status=decision,
+            actor=reviewed_by,
+            notes=notes or f"Human review by {reviewed_by}",
+            timestamp=now,
+        ))
+
+    return {"item_id": item_id, "status": decision, "reviewed_by": reviewed_by}
+
+
+def get_review_queue(status: str = "needs_review", limit: int = 50) -> list:
+    """Get items waiting for human review."""
+    with engine.connect() as conn:
+        rows = conn.execute(
+            sa.select(content_items_tbl)
+            .where(content_items_tbl.c.status == status)
+            .order_by(content_items_tbl.c.created_at.desc())
+            .limit(limit)
+        ).fetchall()
+    return [dict(r._mapping) for r in rows]
+
+
+def get_content_audit_trail(item_id: str) -> list:
+    """Full audit trail for a content item."""
+    with engine.connect() as conn:
+        rows = conn.execute(
+            sa.select(content_audit_tbl)
+            .where(content_audit_tbl.c.item_id == item_id)
+            .order_by(content_audit_tbl.c.timestamp)
+        ).fetchall()
+    return [dict(r._mapping) for r in rows]
+
+
+def get_pipeline_stats() -> dict:
+    """Summary statistics for the content pipeline."""
+    with engine.connect() as conn:
+        by_status = conn.execute(
+            sa.select(
+                content_items_tbl.c.status,
+                sa.func.count().label("count"),
+            ).group_by(content_items_tbl.c.status)
+        ).fetchall()
+        by_risk = conn.execute(
+            sa.select(
+                content_items_tbl.c.risk_level,
+                sa.func.count().label("count"),
+            ).group_by(content_items_tbl.c.risk_level)
+        ).fetchall()
+    return {
+        "by_status": {r.status: r.count for r in by_status},
+        "by_risk":   {r.risk_level: r.count for r in by_risk},
+    }
 
 
 # ── Funciones: usuarios ───────────────────────────────────────────────────────

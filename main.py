@@ -32,6 +32,8 @@ from db import (
     create_user, get_user_by_username, get_user_by_id,
     set_study_plan, get_study_plan, update_study_phase,
     get_week_detail, PLAN_TEMPLATES,
+    submit_content_item, review_content_item,
+    get_review_queue, get_content_audit_trail, get_pipeline_stats,
 )
 from agent import run_agent, run_agent_stream
 
@@ -342,6 +344,71 @@ async def audit_topics(samples: int = 20, force: bool = False):
         result = await asyncio.to_thread(_run_topic_audit, samples)
         _audit_cache = result
     return _audit_cache
+
+
+# ── Content Validation Pipeline ──────────────────────────────────────────────
+
+class ContentSubmitRequest(BaseModel):
+    content_type: str = "explanation"   # question | explanation | general
+    topic: str | None = None
+    content: str                        # stem or main text
+    choices: dict | None = None         # {"A": "...", "B": "...", ...}
+    correct_answer: str | None = None
+    explanation: str | None = None
+    source_url: str | None = None
+    source_type: str | None = None      # official | textbook | guideline | ai-generated
+
+class ReviewRequest(BaseModel):
+    decision: str      # "approved" | "rejected"
+    notes: str = ""
+
+
+@app.post("/content/submit", tags=["pipeline"])
+async def content_submit(req: ContentSubmitRequest, user = Depends(get_current_user)):
+    """Submit content for validation — runs all 4 automatic layers."""
+    item = req.model_dump()
+    result = submit_content_item(item, submitted_by=user["user_id"])
+    return result
+
+
+@app.post("/content/{item_id}/review", tags=["pipeline"])
+async def content_review(item_id: str, req: ReviewRequest, user = Depends(get_current_user)):
+    """Human review decision — approve or reject a content item."""
+    result = review_content_item(
+        item_id=item_id,
+        decision=req.decision,
+        reviewed_by=user["username"],
+        notes=req.notes,
+    )
+    return result
+
+
+@app.get("/content/queue", tags=["pipeline"])
+async def content_queue(status: str = "needs_review", user = Depends(get_current_user)):
+    """Get items in the review queue."""
+    return {"queue": get_review_queue(status=status), "status": status}
+
+
+@app.get("/content/{item_id}/audit", tags=["pipeline"])
+async def content_audit(item_id: str, user = Depends(get_current_user)):
+    """Full audit trail for a content item."""
+    return {"item_id": item_id, "trail": get_content_audit_trail(item_id)}
+
+
+@app.get("/pipeline/stats", tags=["pipeline"])
+async def pipeline_stats(user = Depends(get_current_user)):
+    """Content pipeline statistics."""
+    return get_pipeline_stats()
+
+
+@app.post("/content/validate-preview", tags=["pipeline"])
+async def validate_preview(req: ContentSubmitRequest):
+    """Preview validation result WITHOUT saving — dry run for editors."""
+    from validation import run_validation_pipeline, ContentType
+    item = req.model_dump()
+    ct = ContentType(item.get("content_type", "explanation"))
+    result = run_validation_pipeline(item, ct, submitted_by="preview")
+    return result
 
 
 @app.get("/progress/{user_id}", tags=["legacy"])

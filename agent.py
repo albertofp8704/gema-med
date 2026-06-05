@@ -15,6 +15,7 @@ from openai import AsyncOpenAI
 
 from prompts import SYSTEM_PROMPT
 from tools import get_usmle_question, search_pubmed, TOPIC_KEYWORDS
+from validation import HALLUCINATION_MARKERS
 from db import (
     save_result, get_progress, get_weakness_report,
     set_study_plan, get_study_plan, update_study_phase,
@@ -315,6 +316,13 @@ async def run_agent_stream(session_id: str, history: list[dict], user_message: s
                 yield delta
 
         history.append({"role": "assistant", "content": full_text})
+
+        # Safety check: detect hallucination markers in LLM output
+        full_lower = full_text.lower()
+        for marker in HALLUCINATION_MARKERS:
+            if marker in full_lower:
+                print(f"[SAFETY] Hallucination marker in response: '{marker}' — flagging for review")
+                break
 
         # Post-stream: save result if it was an answer
         if intent == "answer":
