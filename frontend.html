@@ -384,6 +384,98 @@ body{font-family:'Inter',sans-serif;background:var(--page);color:var(--text);hei
 .fc-quick-btn{background:var(--blue-lt);color:var(--blue);border:1px solid #BFDBFE;border-radius:7px;padding:8px 14px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .15s;}
 .fc-quick-btn:hover{background:var(--blue);color:#fff;}
 
+/* Mobile hamburger (hidden on desktop) */
+.mob-menu-btn{display:none;background:none;border:none;color:rgba(255,255,255,.75);font-size:20px;cursor:pointer;padding:4px 8px 4px 0;line-height:1;flex-shrink:0;}
+.mob-menu-btn:hover{color:#fff;}
+
+/* ── RESPONSIVE MOBILE ──────────────────────────────────────────────────── */
+@media (max-width: 768px){
+  /* Viewport */
+  html,body{overflow-x:hidden;}
+
+  /* ── Header ── */
+  .app-header{height:auto;flex-wrap:wrap;padding:6px 10px 4px;gap:0;}
+  .mob-menu-btn{display:block;}
+  .hdr-logo{padding:4px 8px 4px 0;border-right:none;font-size:15px;}
+  .hdr-session{display:none;}
+  .hdr-stats{display:none;}
+  .hdr-name{display:none;}
+  .hdr-vsep{display:none;}
+  .hdr-tools{border-left:none;padding:0 2px;gap:1px;flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;}
+  .hdr-ext{font-size:9px;padding:3px 5px;}
+  .hdr-user{border-left:none;padding-left:8px;margin-left:auto;}
+  .hdr-search-wrap{order:10;flex-basis:100%;padding:4px 0 2px;}
+  .hdr-search-box{width:100%!important;border-radius:8px;}
+  .hdr-search-box:focus-within{width:100%!important;}
+  .hdr-streak{font-size:13px;}
+
+  /* ── Sidebar: fixed overlay on mobile ── */
+  .sidebar{
+    position:fixed!important;
+    top:0;left:0;
+    height:100vh!important;
+    z-index:410;
+    width:260px!important;
+    min-width:260px!important;
+    padding-top:52px;
+    transition:transform .28s cubic-bezier(.4,0,.2,1)!important;
+    transform:translateX(0);
+  }
+  .sidebar.collapsed{
+    transform:translateX(-100%)!important;
+    width:260px!important;
+    min-width:260px!important;
+    overflow:auto!important;
+  }
+  .sidebar.collapsed .sb-content{opacity:1!important;pointer-events:auto!important;}
+  .sb-toggle{display:none!important;}
+
+  /* ── Q area ── */
+  #q-area{padding:10px 10px 80px;}
+  .q-body{padding:14px 14px 0;}
+  .q-options{padding:0 12px 14px;gap:7px;}
+  .q-footer{padding:10px 14px;flex-wrap:wrap;gap:8px;}
+  .confirm-btn{min-width:0!important;flex:1;}
+  .skip-btn{flex:1;text-align:center;}
+  .q-vignette{font-size:13px;line-height:1.7;}
+  .opt-text{font-size:13px;}
+
+  /* ── Input bar ── */
+  .input-bar{padding:8px 10px;}
+  #chat-input{font-size:16px!important;} /* prevent iOS keyboard zoom */
+  #send-btn{padding:10px 14px;font-size:12px;}
+
+  /* ── Modals ── */
+  .overlay{padding:0;align-items:flex-end;}
+  .modal{border-radius:18px 18px 0 0;padding:28px 20px 32px;max-width:100%;width:100%;}
+  .plan-modal{max-width:100%;border-radius:18px 18px 0 0;}
+
+  /* ── Lab modal ── */
+  .lab-overlay{padding:0;align-items:flex-end;}
+  .lab-modal{border-radius:18px 18px 0 0;max-width:100%;max-height:88vh;}
+  .lab-body{grid-template-columns:1fr;}
+
+  /* ── Drawers ── */
+  .drawer{width:100%!important;right:-100%!important;}
+  .drawer.open{right:0!important;}
+  .mn-drawer,.flag-drawer,.fc-drawer{width:100%!important;}
+
+  /* ── Tutor FAB ── */
+  .tutor-fab{bottom:72px;right:14px;}
+  .tutor-popup{width:min(320px,calc(100vw - 24px));max-height:380px;}
+  #fab-btn{width:52px;height:52px;font-size:28px;}
+
+  /* ── User msg ── */
+  .user-msg{max-width:88%;}
+
+  /* ── Chat body scrollbar ── */
+  ::-webkit-scrollbar{width:3px;}
+
+  /* ── Welcome card ── */
+  .welcome-card{padding:20px 16px;}
+  .welcome-card h2{font-size:16px;}
+}
+
 /* Lab values modal */
 .lab-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:900;display:none;align-items:center;justify-content:center;padding:16px;}
 .lab-overlay.open{display:flex;}
@@ -480,6 +572,7 @@ body{font-family:'Inter',sans-serif;background:var(--page);color:var(--text);hei
 <div id="app" class="hidden">
   <!-- Header -->
   <header class="app-header">
+    <button class="mob-menu-btn" onclick="toggleSidebar()" title="Menú">☰</button>
     <div class="hdr-logo">🩺 <span>GEMA</span>-MED</div>
     <div class="hdr-session"><strong id="hdr-week">USMLE Tutor</strong> <span id="hdr-phase"></span></div>
 
@@ -1349,7 +1442,9 @@ function showToast(msg){
 }
 
 // ── SIDEBAR TOGGLE ──────────────────────────────────────────────────────────
+const isMobile = () => window.innerWidth <= 768;
 let sidebarCollapsed = localStorage.getItem('sb_collapsed') === '1';
+
 function updateSidebarToggle(){
   const btn = document.getElementById('sb-toggle');
   const icon = document.getElementById('sb-toggle-icon');
@@ -1357,17 +1452,28 @@ function updateSidebarToggle(){
   btn.style.left = sidebarCollapsed ? '0px' : '220px';
   if(icon) icon.textContent = sidebarCollapsed ? '›' : '‹';
 }
+
 function initSidebar(){
+  // Always start collapsed on mobile
+  if(isMobile()) sidebarCollapsed = true;
   if(sidebarCollapsed) document.getElementById('sidebar')?.classList.add('collapsed');
   updateSidebarToggle();
 }
+
 function toggleSidebar(){
   const sb = document.getElementById('sidebar');
   sidebarCollapsed = !sidebarCollapsed;
   sb.classList.toggle('collapsed', sidebarCollapsed);
-  localStorage.setItem('sb_collapsed', sidebarCollapsed ? '1' : '0');
-  updateSidebarToggle();
+  // On mobile: show/hide backdrop as overlay
+  if(isMobile()){
+    document.getElementById('drawer-backdrop').classList.toggle('show', !sidebarCollapsed);
+  } else {
+    localStorage.setItem('sb_collapsed', sidebarCollapsed ? '1' : '0');
+    updateSidebarToggle();
+  }
 }
+
+// Mobile: close sidebar when backdrop is clicked (handled inside closeAllDrawers below)
 
 // ── STREAK ──────────────────────────────────────────────────────────────────
 let streak=parseInt(localStorage.getItem('gema_streak')||'0');
@@ -1421,6 +1527,11 @@ function closeAllDrawers(){
   document.getElementById('flag-drawer').classList.remove('open');
   document.getElementById('mn-drawer').classList.remove('open');
   document.getElementById('drawer-backdrop').classList.remove('show');
+  // Mobile: also close sidebar overlay
+  if(isMobile() && !sidebarCollapsed){
+    sidebarCollapsed = true;
+    document.getElementById('sidebar')?.classList.add('collapsed');
+  }
 }
 
 // ── MNEMONICS ────────────────────────────────────────────────────────────────
