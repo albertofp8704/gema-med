@@ -374,6 +374,24 @@ body{font-family:'Inter',sans-serif;background:var(--page);color:var(--text);hei
 .q-flag-btn.flagged{color:#FB923C;}
 .fc-quick-btn{background:var(--blue-lt);color:var(--blue);border:1px solid #BFDBFE;border-radius:7px;padding:8px 14px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .15s;}
 .fc-quick-btn:hover{background:var(--blue);color:#fff;}
+
+/* Difficulty badge */
+.q-difficulty{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;padding:2px 8px;border-radius:10px;margin-left:6px;vertical-align:middle;}
+.q-difficulty.easy  {background:#d1fae5;color:#065f46;}
+.q-difficulty.medium{background:#fef3c7;color:#92400e;}
+.q-difficulty.hard  {background:#fee2e2;color:#991b1b;}
+.q-difficulty.new   {background:#f1f5f9;color:#64748b;}
+
+/* Mnemonics drawer */
+.mn-topic-tabs{display:flex;gap:6px;flex-wrap:wrap;padding:14px 16px 0;border-bottom:1px solid var(--border)}
+.mn-topic-pill{background:var(--bg);border:1px solid var(--border);color:var(--muted);border-radius:20px;padding:4px 12px;font-size:12px;cursor:pointer;transition:all .15s;font-family:inherit;}
+.mn-topic-pill:hover,.mn-topic-pill.active{background:var(--blue);color:#fff;border-color:var(--blue);}
+.mn-card{background:#fff;border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:12px;}
+.mn-card-title{font-size:13px;font-weight:700;color:var(--text);margin-bottom:8px;}
+.mn-card-mnemonic{font-size:13px;color:var(--blue);line-height:1.6;font-style:italic;margin-bottom:8px;padding:8px 12px;background:var(--blue-lt);border-radius:6px;border-left:3px solid var(--blue);}
+.mn-card-detail{font-size:12px;color:var(--muted);line-height:1.6;}
+.mn-empty{text-align:center;padding:40px;color:var(--muted);}
+.mn-visit-link{font-size:12px;color:var(--blue);text-align:right;padding:8px 0 0;display:block;}
 </style>
 </head>
 <body>
@@ -453,7 +471,7 @@ body{font-family:'Inter',sans-serif;background:var(--page);color:var(--text);hei
       <button class="hdr-tool-btn" onclick="showFlashcards()" title="Mis Flashcards">📇<span class="hdr-badge hidden" id="fc-badge">0</span></button>
       <div class="hdr-vsep"></div>
       <!-- Links externos -->
-      <button class="hdr-ext" onclick="window.open('https://sketchy.com','_blank')" title="Sketchy Medical — Micro y Farmacología visual">🎨 Sketchy</button>
+      <button class="hdr-ext" onclick="openMnemonics()" title="Mnemonics USMLE — High-yield por tema">🧠 Mnemonics</button>
       <button class="hdr-ext" onclick="window.open('https://apps.ankiweb.net','_blank')" title="AnkiWeb — Repetición espaciada">🃏 Anki</button>
       <button class="hdr-ext" onclick="window.open('https://www.nbme.org/','_blank')" title="NBME Self-Assessments oficiales">📝 NBME</button>
       <button class="hdr-ext" onclick="window.open('https://www.amboss.com','_blank')" title="Amboss Q-Bank">🔬 Amboss</button>
@@ -633,6 +651,16 @@ body{font-family:'Inter',sans-serif;background:var(--page);color:var(--text);hei
     <button class="drawer-close" onclick="closeFlagDrawer()">×</button>
   </div>
   <div class="drawer-body" id="flag-body" style="padding-top:14px;"></div>
+</div>
+
+<!-- ── MNEMONICS DRAWER ── -->
+<div class="drawer" id="mn-drawer">
+  <div class="drawer-hdr">
+    <span class="drawer-title">🧠 Mnemonics USMLE</span>
+    <button class="drawer-close" onclick="closeMnDrawer()">×</button>
+  </div>
+  <div class="mn-topic-tabs" id="mn-tabs"></div>
+  <div class="drawer-body" id="mn-body" style="padding:14px 16px;"></div>
 </div>
 
 <script>
@@ -920,8 +948,11 @@ function parseQuestion(text){
 
   const plain=text.replace(/\*\*/g,'').replace(/\*/g,'');
   const lines=plain.split('\n').map(l=>l.trim()).filter(Boolean);
-  const opts={};let vignette=[],stem='',inOpts=false;
+  const opts={};let vignette=[],stem='',inOpts=false,qid=null;
   for(const line of lines){
+    // Extract hidden QID marker
+    const qidM=line.match(/^\[QID:([^\]]+)\]/);
+    if(qidM){qid=qidM[1];continue;}
     if(/^USMLE Step|^---$|^Escribe tu respuesta|^Write your answer/i.test(line))continue;
     const m=line.match(/^([A-D])\)\s+(.+)/);
     if(m){opts[m[1]]=m[2];inOpts=true;continue;}
@@ -934,7 +965,7 @@ function parseQuestion(text){
     vignette.push(line);
   }
   if(Object.keys(opts).length<2)return null;
-  return{vignette:vignette.join('\n'),stem,opts};
+  return{vignette:vignette.join('\n'),stem,opts,qid};
 }
 
 function renderQuestionCard(parsed,raw){
@@ -943,6 +974,7 @@ function renderQuestionCard(parsed,raw){
   questionRawData[id]=raw;  // store safely outside onclick attribute
   const card=document.createElement('div');
   card.className='q-card';card.id=id;
+  if(parsed.qid)card.dataset.qid=parsed.qid;
   // Use active topic if user selected one (most reliable), else parse from Groq output
   const topicMatch=raw.match(/USMLE Step \d[^—\-\n]*[—\-]+\s*([^\n*]+)/i);
   const parsedLabel=topicMatch?topicMatch[1].trim():'USMLE';
@@ -950,7 +982,7 @@ function renderQuestionCard(parsed,raw){
 
   card.innerHTML=`
     <div class="q-card-header">
-      <span class="q-card-badge">🩺 <strong>${topicLabel}</strong></span>
+      <span class="q-card-badge">🩺 <strong>${topicLabel}</strong><span class="q-difficulty new" id="diff-${id}" title="Dificultad global">⬤ New</span></span>
       <span style="display:flex;align-items:center;gap:8px;">
         <span class="q-card-num">Pregunta ${questionCount}</span>
         <button class="q-flag-btn" id="flagbtn-${id}" onclick="toggleFlag('${id}')" title="Marcar para repasar">🔖</button>
@@ -973,6 +1005,18 @@ function renderQuestionCard(parsed,raw){
     </div>`;
   document.getElementById('q-area').appendChild(card);
   scrollBottom();
+  // Fetch global difficulty stats in background — non-blocking
+  if(parsed.qid){
+    fetch(API+'/q/'+parsed.qid+'/stats').then(r=>r.json()).then(s=>{
+      const el=document.getElementById('diff-'+id);
+      if(!el)return;
+      const labels={easy:'⬤ Easy',medium:'⬤ Medium',hard:'⬤ Hard',new:'⬤ New'};
+      const d=s.difficulty||'new';
+      el.className='q-difficulty '+d;
+      el.textContent=labels[d]||('⬤ '+d);
+      if(s.total>0)el.title=`${s.accuracy}% correcto globalmente (${s.total} intentos)`;
+    }).catch(()=>{});
+  }
 }
 
 let selectedOpts={};
@@ -1304,7 +1348,61 @@ function openDrawer(){document.getElementById('drawer-backdrop').classList.add('
 function closeAllDrawers(){
   document.getElementById('fc-drawer').classList.remove('open');
   document.getElementById('flag-drawer').classList.remove('open');
+  document.getElementById('mn-drawer').classList.remove('open');
   document.getElementById('drawer-backdrop').classList.remove('show');
+}
+
+// ── MNEMONICS ────────────────────────────────────────────────────────────────
+let _mnTopics=[];let _mnActiveTopic='';
+
+async function openMnemonics(){
+  document.getElementById('mn-drawer').classList.add('open');
+  document.getElementById('drawer-backdrop').classList.add('show');
+  if(!_mnTopics.length){
+    try{
+      const r=await fetch(API+'/mnemonics');
+      const d=await r.json();
+      _mnTopics=d.topics||[];
+    }catch(e){_mnTopics=[];}
+  }
+  // Build tabs
+  const tabsEl=document.getElementById('mn-tabs');
+  // Suggest active topic first if it has mnemonics
+  const preferred=activeTopic&&_mnTopics.includes(activeTopic)?activeTopic:(_mnTopics[0]||'');
+  tabsEl.innerHTML=_mnTopics.map(t=>`<button class="mn-topic-pill${t===preferred?' active':''}" onclick="loadMnTopic('${t}')">${t.replace(/_/g,' ')}</button>`).join('');
+  if(preferred)loadMnTopic(preferred);
+}
+
+async function loadMnTopic(topic){
+  _mnActiveTopic=topic;
+  // Update active tab
+  document.querySelectorAll('.mn-topic-pill').forEach(p=>{
+    p.classList.toggle('active',p.textContent.replace(/ /g,'_')===topic||p.textContent===topic.replace(/_/g,' '));
+  });
+  const body=document.getElementById('mn-body');
+  body.innerHTML='<div style="color:var(--muted);font-size:13px">Cargando...</div>';
+  try{
+    const r=await fetch(API+'/mnemonics/'+topic);
+    const d=await r.json();
+    const items=d.mnemonics||[];
+    if(!items.length){body.innerHTML='<div class="mn-empty">No hay mnemonics para este tema aún.</div>';return;}
+    body.innerHTML=items.map(m=>`
+      <div class="mn-card">
+        <div class="mn-card-title">${esc(m.title)}</div>
+        <div class="mn-card-mnemonic">${renderMd(m.mnemonic)}</div>
+        ${m.detail?`<div class="mn-card-detail">${esc(m.detail)}</div>`:''}
+      </div>`).join('')+
+      '<a class="mn-visit-link" href="https://sketchy.com" target="_blank">🎨 Visit Sketchy Medical →</a>';
+  }catch(e){body.innerHTML='<div class="mn-empty">Error cargando mnemonics.</div>';}
+}
+
+function closeMnDrawer(){
+  document.getElementById('mn-drawer').classList.remove('open');
+  document.getElementById('drawer-backdrop').classList.remove('show');
+}
+
+function renderMd(s){
+  return esc(s).replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>').replace(/\n/g,'<br>');
 }
 
 // ── FLAGGED QUESTIONS ────────────────────────────────────────────────────────

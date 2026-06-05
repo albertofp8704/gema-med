@@ -74,6 +74,16 @@ content_audit_tbl = sa.Table(
     sa.Column("timestamp",   sa.String,  nullable=False),
 )
 
+# ── Tabla: estadísticas globales por pregunta ────────────────────────────────
+
+question_stats_tbl = sa.Table(
+    "question_stats", metadata,
+    sa.Column("question_id",       sa.String,  primary_key=True),
+    sa.Column("total_attempts",    sa.Integer, default=0,  nullable=False),
+    sa.Column("correct_attempts",  sa.Integer, default=0,  nullable=False),
+    sa.Column("last_updated",      sa.String,  nullable=True),
+)
+
 # ── Tabla: planes de estudio ──────────────────────────────────────────────────
 
 study_plans_tbl = sa.Table(
@@ -354,11 +364,54 @@ def get_user_by_id(user_id: str) -> dict | None:
 # ── Funciones: resultados ─────────────────────────────────────────────────────
 
 def save_result(user_id: str, question_id: str, topic: str, step: int, correct: bool) -> None:
+    now = datetime.now().isoformat()
     with engine.begin() as conn:
         conn.execute(results_tbl.insert().values(
             user_id=user_id, question_id=question_id, topic=topic or "general",
-            step=step or 1, correct=int(correct), timestamp=datetime.now().isoformat(),
+            step=step or 1, correct=int(correct), timestamp=now,
         ))
+        # Upsert global question stats
+        existing = conn.execute(
+            sa.select(question_stats_tbl)
+            .where(question_stats_tbl.c.question_id == question_id)
+        ).fetchone()
+        if existing:
+            conn.execute(
+                question_stats_tbl.update()
+                .where(question_stats_tbl.c.question_id == question_id)
+                .values(
+                    total_attempts=existing.total_attempts + 1,
+                    correct_attempts=existing.correct_attempts + int(correct),
+                    last_updated=now,
+                )
+            )
+        else:
+            conn.execute(question_stats_tbl.insert().values(
+                question_id=question_id,
+                total_attempts=1,
+                correct_attempts=int(correct),
+                last_updated=now,
+            ))
+
+
+def get_question_stats(question_id: str) -> dict:
+    with engine.connect() as conn:
+        row = conn.execute(
+            sa.select(question_stats_tbl)
+            .where(question_stats_tbl.c.question_id == question_id)
+        ).fetchone()
+    if not row or row.total_attempts == 0:
+        return {"question_id": question_id, "total": 0, "correct": 0, "accuracy": None, "difficulty": "new"}
+    total    = row.total_attempts
+    correct  = row.correct_attempts
+    accuracy = round(correct / total * 100, 1)
+    if accuracy >= 70:
+        difficulty = "easy"
+    elif accuracy >= 40:
+        difficulty = "medium"
+    else:
+        difficulty = "hard"
+    return {"question_id": question_id, "total": total, "correct": correct, "accuracy": accuracy, "difficulty": difficulty}
 
 
 def get_progress(user_id: str) -> dict:

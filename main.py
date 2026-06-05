@@ -34,11 +34,13 @@ from db import (
     get_week_detail, PLAN_TEMPLATES,
     submit_content_item, review_content_item,
     get_review_queue, get_content_audit_trail, get_pipeline_stats,
+    get_question_stats,
 )
 from agent import run_agent, run_agent_stream
 
 sessions: dict[str, list] = defaultdict(list)
 FRONTEND = Path(__file__).parent / "frontend.html"
+ADMIN    = Path(__file__).parent / "admin.html"
 
 # Audit cache — resultado de la última auditoría de topics
 _audit_cache: dict = {}
@@ -409,6 +411,39 @@ async def validate_preview(req: ContentSubmitRequest):
     ct = ContentType(item.get("content_type", "explanation"))
     result = run_validation_pipeline(item, ct, submitted_by="preview")
     return result
+
+
+# ── Question stats (global difficulty / accuracy) ────────────────────────────
+
+@app.get("/q/{question_id}/stats", tags=["questions"])
+async def question_stats_endpoint(question_id: str):
+    """Global stats for a specific question — used for difficulty badge in frontend."""
+    return get_question_stats(question_id)
+
+
+# ── Mnemonics ─────────────────────────────────────────────────────────────────
+
+@app.get("/mnemonics/{topic}", tags=["mnemonics"])
+async def mnemonics_for_topic(topic: str):
+    """Returns curated high-yield mnemonics for a topic."""
+    from mnemonics_data import get_mnemonics, get_all_topics
+    return {"topic": topic, "mnemonics": get_mnemonics(topic), "available_topics": get_all_topics()}
+
+
+@app.get("/mnemonics", tags=["mnemonics"])
+async def mnemonics_index():
+    """List all topics that have mnemonics."""
+    from mnemonics_data import get_all_topics
+    return {"topics": get_all_topics()}
+
+
+# ── Admin panel ───────────────────────────────────────────────────────────────
+
+@app.get("/admin", include_in_schema=False)
+def admin_panel():
+    if ADMIN.exists():
+        return FileResponse(ADMIN)
+    raise HTTPException(404, "Admin panel not found")
 
 
 @app.get("/progress/{user_id}", tags=["legacy"])

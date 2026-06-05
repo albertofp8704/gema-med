@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>GEMA-MED Admin</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#0f172a;color:#e2e8f0;min-height:100vh}
+a{color:#60a5fa;text-decoration:none}
+
+/* Header */
+.adm-header{background:#1e293b;border-bottom:1px solid #334155;padding:14px 24px;display:flex;align-items:center;gap:16px}
+.adm-logo{font-size:20px;font-weight:700;color:#fff}.adm-logo span{color:#3b82f6}
+.adm-nav{display:flex;gap:4px;margin-left:auto}
+.nav-tab{background:transparent;border:1px solid transparent;color:#94a3b8;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:13px;transition:all .15s}
+.nav-tab:hover,.nav-tab.active{background:#3b82f6;color:#fff;border-color:#3b82f6}
+.adm-user{font-size:13px;color:#94a3b8;margin-left:16px}
+.adm-logout{background:transparent;border:1px solid #475569;color:#94a3b8;padding:5px 10px;border-radius:5px;cursor:pointer;font-size:12px}
+.adm-logout:hover{border-color:#ef4444;color:#ef4444}
+
+/* Login */
+#login-screen{display:flex;align-items:center;justify-content:center;min-height:calc(100vh - 57px)}
+.login-box{background:#1e293b;border:1px solid #334155;border-radius:12px;padding:32px;width:360px}
+.login-title{font-size:18px;font-weight:600;margin-bottom:20px;text-align:center}
+.form-group{margin-bottom:14px}
+.form-group label{display:block;font-size:12px;color:#94a3b8;margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px}
+.form-group input{width:100%;background:#0f172a;border:1px solid #334155;color:#e2e8f0;padding:9px 12px;border-radius:7px;font-size:14px;outline:none}
+.form-group input:focus{border-color:#3b82f6}
+.btn-primary{width:100%;background:#3b82f6;color:#fff;border:none;padding:10px;border-radius:7px;font-size:14px;font-weight:600;cursor:pointer}
+.btn-primary:hover{background:#2563eb}
+.login-err{color:#f87171;font-size:13px;text-align:center;margin-top:10px}
+
+/* Layout */
+#app-screen{display:none;padding:24px}
+.page{display:none}
+.page.active{display:block}
+
+/* Stats */
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px;margin-bottom:28px}
+.stat-card{background:#1e293b;border:1px solid #334155;border-radius:10px;padding:18px}
+.stat-label{font-size:12px;color:#64748b;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+.stat-value{font-size:28px;font-weight:700}
+.stat-value.green{color:#34d399}.stat-value.yellow{color:#fbbf24}.stat-value.red{color:#f87171}.stat-value.blue{color:#60a5fa}.stat-value.purple{color:#a78bfa}
+
+/* Table */
+.section-title{font-size:15px;font-weight:600;margin-bottom:14px;color:#f1f5f9}
+.tbl-wrap{background:#1e293b;border:1px solid #334155;border-radius:10px;overflow:hidden}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{background:#0f172a;color:#64748b;text-transform:uppercase;font-size:11px;letter-spacing:.5px;padding:10px 14px;text-align:left}
+td{padding:10px 14px;border-top:1px solid #1e293b;vertical-align:top;color:#cbd5e1}
+tr:hover td{background:#162032}
+.badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600}
+.badge-draft{background:#1e293b;color:#64748b;border:1px solid #334155}
+.badge-needs_review{background:#fef3c7;color:#92400e}
+.badge-auto_checked{background:#dbeafe;color:#1e40af}
+.badge-approved{background:#d1fae5;color:#065f46}
+.badge-rejected{background:#fee2e2;color:#991b1b}
+.badge-risk-low{background:#d1fae5;color:#065f46}
+.badge-risk-medium{background:#fef3c7;color:#92400e}
+.badge-risk-high{background:#fee2e2;color:#991b1b}
+
+/* Content preview */
+.content-preview{max-width:380px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#94a3b8;font-size:12px}
+.content-preview.expanded{white-space:normal;max-width:100%}
+
+/* Review panel */
+.review-panel{background:#162032;border:1px solid #1e3a5f;border-radius:8px;padding:16px;margin-top:8px;display:none}
+.review-panel.open{display:block}
+.review-textarea{width:100%;background:#0f172a;border:1px solid #334155;color:#e2e8f0;padding:8px;border-radius:6px;font-size:13px;resize:vertical;min-height:60px;outline:none;margin-top:8px;margin-bottom:10px}
+.review-textarea:focus{border-color:#3b82f6}
+.review-actions{display:flex;gap:8px}
+.btn-approve{background:#059669;color:#fff;border:none;padding:7px 16px;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600}
+.btn-approve:hover{background:#047857}
+.btn-reject{background:#dc2626;color:#fff;border:none;padding:7px 16px;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600}
+.btn-reject:hover{background:#b91c1c}
+.btn-details{background:transparent;border:1px solid #334155;color:#94a3b8;padding:5px 10px;border-radius:5px;cursor:pointer;font-size:12px}
+.btn-details:hover{border-color:#60a5fa;color:#60a5fa}
+.btn-sm{background:transparent;border:1px solid #334155;color:#94a3b8;padding:4px 8px;border-radius:5px;cursor:pointer;font-size:11px}
+.btn-sm:hover{border-color:#60a5fa;color:#60a5fa}
+
+/* Audit trail */
+.audit-trail{font-size:12px;color:#94a3b8}
+.audit-row{padding:6px 0;border-top:1px solid #1e293b;display:flex;gap:10px}
+.audit-action{font-weight:600;color:#e2e8f0;min-width:80px}
+.audit-time{color:#475569;min-width:130px}
+.audit-actor{color:#60a5fa}
+
+/* Filter bar */
+.filter-bar{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+.filter-select{background:#1e293b;border:1px solid #334155;color:#e2e8f0;padding:6px 10px;border-radius:6px;font-size:13px;outline:none}
+.filter-select:focus{border-color:#3b82f6}
+.refresh-btn{background:#1e293b;border:1px solid #334155;color:#94a3b8;padding:6px 12px;border-radius:6px;cursor:pointer;font-size:13px}
+.refresh-btn:hover{border-color:#60a5fa;color:#60a5fa}
+
+/* Toast */
+.toast{position:fixed;bottom:24px;right:24px;background:#1e293b;border:1px solid #334155;color:#e2e8f0;padding:12px 18px;border-radius:8px;font-size:13px;z-index:999;opacity:0;transform:translateY(10px);transition:all .3s;pointer-events:none}
+.toast.show{opacity:1;transform:translateY(0)}
+.toast.success{border-color:#34d399;color:#34d399}
+.toast.error{border-color:#f87171;color:#f87171}
+
+/* Loading */
+.loading-row td{text-align:center;color:#475569;padding:32px}
+.empty-state{text-align:center;padding:48px;color:#475569}
+.empty-state .empty-icon{font-size:36px;margin-bottom:12px}
+</style>
+</head>
+<body>
+
+<header class="adm-header">
+  <div class="adm-logo">GEMA<span>-MED</span> Admin</div>
+  <nav class="adm-nav" id="main-nav" style="display:none">
+    <button class="nav-tab active" onclick="showPage('stats')">📊 Stats</button>
+    <button class="nav-tab" onclick="showPage('queue')">📋 Review Queue</button>
+    <button class="nav-tab" onclick="showPage('approved')">✅ Approved</button>
+    <button class="nav-tab" onclick="showPage('rejected')">❌ Rejected</button>
+  </nav>
+  <span class="adm-user" id="adm-user-label"></span>
+  <button class="adm-logout" id="adm-logout" onclick="logout()" style="display:none">Logout</button>
+</header>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-box">
+    <div class="login-title">🩺 Admin Login</div>
+    <div class="form-group">
+      <label>Username</label>
+      <input type="text" id="adm-username" placeholder="admin" autocomplete="username">
+    </div>
+    <div class="form-group">
+      <label>Password</label>
+      <input type="password" id="adm-password" placeholder="••••••" autocomplete="current-password">
+    </div>
+    <button class="btn-primary" onclick="login()">Log in</button>
+    <div class="login-err" id="login-err"></div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app-screen">
+
+  <!-- STATS PAGE -->
+  <div class="page" id="page-stats">
+    <div class="stats-grid" id="stats-grid">
+      <div class="stat-card"><div class="stat-label">Draft</div><div class="stat-value blue" id="st-draft">–</div></div>
+      <div class="stat-card"><div class="stat-label">Needs Review</div><div class="stat-value yellow" id="st-needs_review">–</div></div>
+      <div class="stat-card"><div class="stat-label">Auto Checked</div><div class="stat-value purple" id="st-auto_checked">–</div></div>
+      <div class="stat-card"><div class="stat-label">Approved</div><div class="stat-value green" id="st-approved">–</div></div>
+      <div class="stat-card"><div class="stat-label">Rejected</div><div class="stat-value red" id="st-rejected">–</div></div>
+      <div class="stat-card"><div class="stat-label">High Risk</div><div class="stat-value red" id="st-risk-high">–</div></div>
+      <div class="stat-card"><div class="stat-label">Medium Risk</div><div class="stat-value yellow" id="st-risk-medium">–</div></div>
+      <div class="stat-card"><div class="stat-label">Low Risk</div><div class="stat-value green" id="st-risk-low">–</div></div>
+    </div>
+
+    <div class="section-title">Topic Quality Audit</div>
+    <div class="tbl-wrap" id="audit-tbl-wrap">
+      <table>
+        <thead><tr><th>Topic</th><th>Accuracy</th><th>Pool (label)</th><th>Pool (strict)</th><th>Status</th></tr></thead>
+        <tbody id="audit-tbody"><tr class="loading-row"><td colspan="5">Loading audit data...</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- REVIEW QUEUE PAGE -->
+  <div class="page" id="page-queue">
+    <div class="filter-bar">
+      <select class="filter-select" id="queue-status" onchange="loadQueue()">
+        <option value="needs_review">Needs Review</option>
+        <option value="auto_checked">Auto Checked</option>
+        <option value="draft">Draft</option>
+      </select>
+      <button class="refresh-btn" onclick="loadQueue()">↺ Refresh</button>
+      <span style="color:#475569;font-size:13px;margin-left:auto" id="queue-count"></span>
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th style="width:80px">Type</th><th style="width:100px">Topic</th><th>Content</th><th style="width:100px">Risk</th><th style="width:110px">Status</th><th style="width:80px">Date</th><th style="width:120px">Actions</th></tr></thead>
+        <tbody id="queue-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- APPROVED PAGE -->
+  <div class="page" id="page-approved">
+    <div class="filter-bar">
+      <button class="refresh-btn" onclick="loadApproved()">↺ Refresh</button>
+      <span style="color:#475569;font-size:13px;margin-left:auto" id="approved-count"></span>
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>Type</th><th>Topic</th><th>Content</th><th>Reviewed by</th><th>Date</th><th>Actions</th></tr></thead>
+        <tbody id="approved-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- REJECTED PAGE -->
+  <div class="page" id="page-rejected">
+    <div class="filter-bar">
+      <button class="refresh-btn" onclick="loadRejected()">↺ Refresh</button>
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>Type</th><th>Topic</th><th>Content</th><th>Reason</th><th>Date</th><th>Actions</th></tr></thead>
+        <tbody id="rejected-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const API = '';  // same origin
+let token = localStorage.getItem('gema_admin_token') || '';
+let currentUser = '';
+
+// ── Auth ──────────────────────────────────────────────────────────────────────
+
+async function login(){
+  const u=document.getElementById('adm-username').value.trim();
+  const p=document.getElementById('adm-password').value;
+  if(!u||!p){showErr('Fill in all fields');return;}
+  try{
+    const r=await fetch(API+'/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:u,password:p})});
+    const d=await r.json();
+    if(!r.ok){showErr(d.detail||'Login failed');return;}
+    token=d.token;currentUser=d.user.display_name||d.user.username;
+    localStorage.setItem('gema_admin_token',token);
+    enterApp();
+  }catch(e){showErr('Connection error');}
+}
+
+function logout(){
+  token='';localStorage.removeItem('gema_admin_token');
+  document.getElementById('login-screen').style.display='flex';
+  document.getElementById('app-screen').style.display='none';
+  document.getElementById('main-nav').style.display='none';
+  document.getElementById('adm-logout').style.display='none';
+  document.getElementById('adm-user-label').textContent='';
+}
+
+function enterApp(){
+  document.getElementById('login-screen').style.display='none';
+  document.getElementById('app-screen').style.display='block';
+  document.getElementById('main-nav').style.display='flex';
+  document.getElementById('adm-logout').style.display='block';
+  document.getElementById('adm-user-label').textContent=currentUser;
+  showPage('stats');
+}
+
+function showErr(msg){document.getElementById('login-err').textContent=msg;}
+
+function authHeaders(){return{'Content-Type':'application/json','Authorization':'Bearer '+token};}
+
+// ── Pages ─────────────────────────────────────────────────────────────────────
+
+function showPage(name){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('page-'+name).classList.add('active');
+  // activate nav tab
+  const tabs=document.querySelectorAll('.nav-tab');
+  const map={stats:0,queue:1,approved:2,rejected:3};
+  if(map[name]!==undefined)tabs[map[name]].classList.add('active');
+  if(name==='stats')loadStats();
+  if(name==='queue')loadQueue();
+  if(name==='approved')loadApproved();
+  if(name==='rejected')loadRejected();
+}
+
+// ── Stats ─────────────────────────────────────────────────────────────────────
+
+async function loadStats(){
+  try{
+    const [statsR,auditR]=await Promise.all([
+      fetch(API+'/pipeline/stats',{headers:authHeaders()}),
+      fetch(API+'/audit/topics',{headers:authHeaders()}),
+    ]);
+    const stats=await statsR.json();
+    const audit=await auditR.json();
+
+    // Status counts
+    const byStatus=stats.by_status||{};
+    const byRisk=stats.by_risk||{};
+    ['draft','needs_review','auto_checked','approved','rejected'].forEach(s=>{
+      const el=document.getElementById('st-'+s);
+      if(el)el.textContent=byStatus[s]||0;
+    });
+    ['high','medium','low'].forEach(r=>{
+      const el=document.getElementById('st-risk-'+r);
+      if(el)el.textContent=byRisk[r]||0;
+    });
+
+    // Audit table
+    const tbody=document.getElementById('audit-tbody');
+    if(!audit.topics){tbody.innerHTML='<tr class="loading-row"><td colspan="5">Audit pending (runs 2 min after startup)</td></tr>';return;}
+    tbody.innerHTML=Object.entries(audit.topics).map(([topic,r])=>`
+      <tr>
+        <td style="text-transform:capitalize">${topic}</td>
+        <td><strong style="color:${r.accuracy>=80?'#34d399':r.accuracy>=60?'#fbbf24':'#f87171'}">${r.accuracy}%</strong> <span style="color:#475569">(${r.ok}/${r.samples})</span></td>
+        <td>${r.pool_label.toLocaleString()}</td>
+        <td>${r.pool_strict.toLocaleString()}</td>
+        <td><span class="badge ${r.status==='PASS'?'badge-approved':r.status==='WARN'?'badge-needs_review':'badge-rejected'}">${r.status}</span></td>
+      </tr>`).join('');
+  }catch(e){console.error(e);}
+}
+
+// ── Queue ─────────────────────────────────────────────────────────────────────
+
+async function loadQueue(){
+  const status=document.getElementById('queue-status').value;
+  const tbody=document.getElementById('queue-tbody');
+  tbody.innerHTML='<tr class="loading-row"><td colspan="7">Loading...</td></tr>';
+  try{
+    const r=await fetch(API+'/content/queue?status='+status,{headers:authHeaders()});
+    const d=await r.json();
+    const items=d.queue||[];
+    document.getElementById('queue-count').textContent=items.length+' items';
+    if(!items.length){tbody.innerHTML='<tr><td colspan="7"><div class="empty-state"><div class="empty-icon">✅</div><div>No items with status "'+status+'"</div></div></td></tr>';return;}
+    tbody.innerHTML=items.map(item=>renderQueueRow(item)).join('');
+  }catch(e){tbody.innerHTML='<tr class="loading-row"><td colspan="7">Error loading queue</td></tr>';}
+}
+
+function renderQueueRow(item){
+  const date=(item.created_at||'').split('T')[0];
+  const previewId='prev-'+item.id;
+  const panelId='panel-'+item.id;
+  return`<tr id="row-${item.id}">
+    <td><span class="badge badge-draft">${item.content_type||'–'}</span></td>
+    <td style="text-transform:capitalize">${item.topic||'–'}</td>
+    <td>
+      <div class="content-preview" id="${previewId}">${esc(item.content||'')}</div>
+      <div class="review-panel" id="${panelId}">
+        <div style="font-size:12px;color:#94a3b8;margin-bottom:8px">
+          ${item.choices?'<strong>Choices:</strong> '+formatChoices(item.choices)+'<br>':''}
+          ${item.correct_answer?'<strong>Correct:</strong> '+esc(item.correct_answer)+'<br>':''}
+          ${item.explanation?'<strong>Explanation:</strong> '+esc(item.explanation.slice(0,200))+(item.explanation.length>200?'...':'')+'<br>':''}
+          ${item.source_url?'<strong>Source:</strong> <a href="'+esc(item.source_url)+'" target="_blank">'+esc(item.source_url.slice(0,50))+'</a><br>':''}
+        </div>
+        <div style="font-size:12px;color:#64748b">Validation:</div>
+        <div style="font-size:11px;color:#475569;font-family:monospace;background:#0f172a;padding:6px;border-radius:4px;margin:4px 0;max-height:80px;overflow-y:auto">${formatValidation(item.validation_report)}</div>
+        <textarea class="review-textarea" id="notes-${item.id}" placeholder="Review notes (optional)..."></textarea>
+        <div class="review-actions">
+          <button class="btn-approve" onclick="doReview('${item.id}','approved')">✅ Approve</button>
+          <button class="btn-reject" onclick="doReview('${item.id}','rejected')">❌ Reject</button>
+          <button class="btn-sm" onclick="loadAuditTrail('${item.id}')">🔍 Audit</button>
+          <button class="btn-sm" onclick="closePanel('${item.id}')">Close</button>
+        </div>
+        <div id="audit-${item.id}" style="margin-top:10px"></div>
+      </div>
+    </td>
+    <td><span class="badge badge-risk-${(item.risk_level||'low').toLowerCase()}">${item.risk_level||'low'}</span></td>
+    <td><span class="badge badge-${item.status}">${item.status}</span></td>
+    <td style="font-size:12px;color:#475569">${date}</td>
+    <td>
+      <button class="btn-details" onclick="togglePanel('${item.id}')">Review</button>
+    </td>
+  </tr>`;
+}
+
+function togglePanel(id){
+  const panel=document.getElementById('panel-'+id);
+  const prev=document.getElementById('prev-'+id);
+  if(panel.classList.contains('open')){panel.classList.remove('open');}
+  else{panel.classList.add('open');}
+}
+
+function closePanel(id){
+  document.getElementById('panel-'+id).classList.remove('open');
+}
+
+async function doReview(itemId,decision){
+  const notes=document.getElementById('notes-'+itemId).value;
+  try{
+    const r=await fetch(API+'/content/'+itemId+'/review',{
+      method:'POST',headers:authHeaders(),
+      body:JSON.stringify({decision,notes}),
+    });
+    if(!r.ok)throw new Error(await r.text());
+    toast(decision==='approved'?'✅ Approved':'❌ Rejected',decision==='approved'?'success':'error');
+    // Remove row
+    const row=document.getElementById('row-'+itemId);
+    if(row)row.remove();
+    // Update count
+    const countEl=document.getElementById('queue-count');
+    if(countEl){
+      const n=parseInt(countEl.textContent)||1;
+      countEl.textContent=(n-1)+' items';
+    }
+  }catch(e){toast('Error: '+e.message,'error');}
+}
+
+async function loadAuditTrail(itemId){
+  const el=document.getElementById('audit-'+itemId);
+  el.innerHTML='<div style="color:#475569;font-size:12px">Loading...</div>';
+  try{
+    const r=await fetch(API+'/content/'+itemId+'/audit',{headers:authHeaders()});
+    const d=await r.json();
+    const trail=d.trail||[];
+    if(!trail.length){el.innerHTML='<div style="color:#475569;font-size:12px">No audit trail</div>';return;}
+    el.innerHTML='<div style="font-size:11px;color:#64748b;margin-bottom:4px">AUDIT TRAIL</div>'+
+      trail.map(a=>`<div class="audit-row">
+        <span class="audit-time">${(a.timestamp||'').replace('T',' ').slice(0,16)}</span>
+        <span class="audit-action">${a.action}</span>
+        <span class="audit-actor">${a.actor||'–'}</span>
+        <span style="color:#475569">${a.notes||''}</span>
+      </div>`).join('');
+  }catch(e){el.innerHTML='<div style="color:#f87171;font-size:12px">Error loading trail</div>';}
+}
+
+// ── Approved / Rejected pages ─────────────────────────────────────────────────
+
+async function loadApproved(){
+  await loadStatusPage('approved','approved-tbody','approved-count');
+}
+async function loadRejected(){
+  await loadStatusPage('rejected','rejected-tbody',null);
+}
+
+async function loadStatusPage(status,tbodyId,countId){
+  const tbody=document.getElementById(tbodyId);
+  tbody.innerHTML='<tr class="loading-row"><td colspan="6">Loading...</td></tr>';
+  try{
+    const r=await fetch(API+'/content/queue?status='+status,{headers:authHeaders()});
+    const d=await r.json();
+    const items=d.queue||[];
+    if(countId)document.getElementById(countId).textContent=items.length+' items';
+    if(!items.length){tbody.innerHTML=`<tr><td colspan="6"><div class="empty-state"><div class="empty-icon">${status==='approved'?'📭':'🗑'}</div><div>No ${status} items</div></div></td></tr>`;return;}
+    tbody.innerHTML=items.map(item=>{
+      const date=(item.created_at||'').split('T')[0];
+      return`<tr>
+        <td><span class="badge badge-draft">${item.content_type||'–'}</span></td>
+        <td style="text-transform:capitalize">${item.topic||'–'}</td>
+        <td><div class="content-preview">${esc(item.content||'')}</div></td>
+        <td style="font-size:12px;color:#94a3b8">${esc(item.reviewed_by||'–')}<br><span style="color:#475569">${esc(item.review_notes||'')}</span></td>
+        <td style="font-size:12px;color:#475569">${date}</td>
+        <td><button class="btn-sm" onclick="loadAuditTrailModal('${item.id}')">🔍 Audit</button></td>
+      </tr>`;
+    }).join('');
+  }catch(e){tbody.innerHTML='<tr class="loading-row"><td colspan="6">Error</td></tr>';}
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+function esc(s){
+  if(!s)return'';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function formatChoices(choicesJson){
+  try{
+    const c=typeof choicesJson==='string'?JSON.parse(choicesJson):choicesJson;
+    return Object.entries(c).map(([k,v])=>`${k}) ${v}`).join(' | ');
+  }catch{return String(choicesJson);}
+}
+
+function formatValidation(reportJson){
+  try{
+    const r=typeof reportJson==='string'?JSON.parse(reportJson):reportJson;
+    if(!r)return'–';
+    const lines=[];
+    if(r.errors&&r.errors.length)lines.push('Errors: '+r.errors.join(', '));
+    if(r.warnings&&r.warnings.length)lines.push('Warnings: '+r.warnings.join(', '));
+    if(r.risk_level)lines.push('Risk: '+r.risk_level);
+    return lines.join('\n')||'Clean';
+  }catch{return String(reportJson||'–');}
+}
+
+function toast(msg,type=''){
+  const el=document.getElementById('toast');
+  el.textContent=msg;el.className='toast show'+(type?' '+type:'');
+  setTimeout(()=>el.classList.remove('show'),2500);
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+
+if(token){
+  // Try to verify token is still valid
+  fetch(API+'/me',{headers:authHeaders()}).then(r=>{
+    if(r.ok)return r.json();
+    throw new Error('invalid');
+  }).then(d=>{
+    currentUser=d.user?.display_name||d.user?.username||'Admin';
+    enterApp();
+  }).catch(()=>{
+    token='';localStorage.removeItem('gema_admin_token');
+  });
+}
+
+// Enter on login fields
+document.addEventListener('keydown',e=>{
+  if(e.key==='Enter'&&document.getElementById('login-screen').style.display!=='none')login();
+});
+</script>
+</body>
+</html>

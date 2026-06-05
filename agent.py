@@ -64,11 +64,10 @@ def _detect_intent(text: str) -> str:
 # ── Question formatter — NO LLM, 100% determinístico ─────────────────────────
 
 def _format_question(q: dict, display_topic: str, step_num: str) -> str:
-    """Formatea la pregunta directamente en Python sin pasar por Groq.
-    Elimina el problema de que el LLM ignore la pregunta y genere la suya.
-    """
+    """Formatea la pregunta directamente en Python sin pasar por Groq."""
     opts = "\n".join(f"{k}) {v}" for k, v in q["options"].items())
     return (
+        f"[QID:{q['id']}]\n"
         f"**USMLE Step {step_num} — {display_topic}**\n\n"
         f"{q['question']}\n\n"
         f"**Which of the following is the most appropriate answer?**\n\n"
