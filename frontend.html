@@ -393,31 +393,32 @@ body{font-family:'Inter',sans-serif;background:var(--page);color:var(--text);hei
   /* Viewport */
   html,body{overflow-x:hidden;}
 
-  /* ── Header ── */
-  .app-header{height:auto;flex-wrap:wrap;padding:6px 10px 4px;gap:0;}
+  /* ── Header — stays on top of everything ── */
+  .app-header{height:auto;flex-wrap:wrap;padding:6px 10px 4px;gap:0;position:relative;z-index:500;}
   .mob-menu-btn{display:block;}
-  .hdr-logo{padding:4px 8px 4px 0;border-right:none;font-size:15px;}
+  .hdr-logo{padding:4px 8px 4px 0;border-right:none;font-size:15px;flex-shrink:0;}
   .hdr-session{display:none;}
   .hdr-stats{display:none;}
   .hdr-name{display:none;}
   .hdr-vsep{display:none;}
-  .hdr-tools{border-left:none;padding:0 2px;gap:1px;flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;}
-  .hdr-ext{font-size:9px;padding:3px 5px;}
-  .hdr-user{border-left:none;padding-left:8px;margin-left:auto;}
+  .hdr-tools{border-left:none;padding:0 2px;gap:1px;flex:1;min-width:0;flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
+  .hdr-tools::-webkit-scrollbar{display:none;}
+  .hdr-ext{font-size:9px;padding:3px 5px;white-space:nowrap;flex-shrink:0;}
+  .hdr-user{border-left:none;padding-left:8px;flex-shrink:0;}
   .hdr-search-wrap{order:10;flex-basis:100%;padding:4px 0 2px;}
   .hdr-search-box{width:100%!important;border-radius:8px;}
   .hdr-search-box:focus-within{width:100%!important;}
-  .hdr-streak{font-size:13px;}
+  .hdr-streak{font-size:13px;white-space:nowrap;flex-shrink:0;}
 
-  /* ── Sidebar: fixed overlay on mobile ── */
+  /* ── Sidebar: fixed overlay, slides from left, below header ── */
   .sidebar{
     position:fixed!important;
     top:0;left:0;
     height:100vh!important;
-    z-index:410;
+    z-index:450;
     width:260px!important;
     min-width:260px!important;
-    padding-top:52px;
+    padding-top:86px;
     transition:transform .28s cubic-bezier(.4,0,.2,1)!important;
     transform:translateX(0);
   }
