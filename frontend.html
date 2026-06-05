@@ -1,7 +1,9 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0"/>
+<script>(function(){if(/iPhone|iPad|iPod|Android|Mobile/i.test(navigator.userAgent)||window.innerWidth<=900)document.documentElement.classList.add('is-mob');})()</script>
 <title>GEMA-MED — USMLE Tutor</title>
 <script src="https://cdn.jsdelivr.net/npm/marked@9/marked.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Merriweather:wght@400;700&display=swap" rel="stylesheet"/>
@@ -388,93 +390,89 @@ body{font-family:'Inter',sans-serif;background:var(--page);color:var(--text);hei
 .mob-menu-btn{display:none;background:none;border:none;color:rgba(255,255,255,.75);font-size:20px;cursor:pointer;padding:4px 8px 4px 0;line-height:1;flex-shrink:0;}
 .mob-menu-btn:hover{color:#fff;}
 
-/* ── RESPONSIVE MOBILE ──────────────────────────────────────────────────── */
-@media (max-width: 768px){
-  /* Viewport */
-  html,body{overflow-x:hidden;}
+/* ── RESPONSIVE MOBILE — usa html.is-mob (JS+UA) + @media fallback ── */
+html.is-mob,
+html.is-mob body{overflow-x:hidden;}
 
-  /* ── Header — stays on top of everything ── */
-  .app-header{height:auto;flex-wrap:wrap;padding:6px 10px 4px;gap:0;position:relative;z-index:500;}
-  .mob-menu-btn{display:block;}
-  .hdr-logo{padding:4px 8px 4px 0;border-right:none;font-size:15px;flex-shrink:0;}
-  .hdr-session{display:none;}
-  .hdr-stats{display:none;}
-  .hdr-name{display:none;}
-  .hdr-vsep{display:none;}
-  .hdr-tools{border-left:none;padding:0 2px;gap:1px;flex:1;min-width:0;flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
-  .hdr-tools::-webkit-scrollbar{display:none;}
-  .hdr-ext{font-size:9px;padding:3px 5px;white-space:nowrap;flex-shrink:0;}
-  .hdr-user{border-left:none;padding-left:8px;flex-shrink:0;}
-  .hdr-search-wrap{order:10;flex-basis:100%;padding:4px 0 2px;}
-  .hdr-search-box{width:100%!important;border-radius:8px;}
-  .hdr-search-box:focus-within{width:100%!important;}
-  .hdr-streak{font-size:13px;white-space:nowrap;flex-shrink:0;}
+/* Header */
+html.is-mob .app-header{height:auto;flex-wrap:wrap;padding:6px 10px 4px;gap:0;position:relative;z-index:500;}
+html.is-mob .mob-menu-btn{display:block;}
+html.is-mob .hdr-logo{padding:4px 8px 4px 0;border-right:none;font-size:15px;flex-shrink:0;}
+html.is-mob .hdr-session{display:none;}
+html.is-mob .hdr-stats{display:none;}
+html.is-mob .hdr-name{display:none;}
+html.is-mob .hdr-vsep{display:none;}
+html.is-mob .hdr-tools{border-left:none;padding:0 2px;gap:1px;flex:1;min-width:0;flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
+html.is-mob .hdr-tools::-webkit-scrollbar{display:none;}
+html.is-mob .hdr-ext{font-size:9px;padding:3px 5px;white-space:nowrap;flex-shrink:0;}
+html.is-mob .hdr-user{border-left:none;padding-left:8px;flex-shrink:0;}
+html.is-mob .hdr-search-wrap{order:10;flex-basis:100%;padding:4px 0 2px;}
+html.is-mob .hdr-search-box{width:100%!important;border-radius:8px;}
+html.is-mob .hdr-streak{font-size:13px;white-space:nowrap;flex-shrink:0;}
 
-  /* ── Sidebar: fixed overlay, slides from left, below header ── */
-  .sidebar{
-    position:fixed!important;
-    top:0;left:0;
-    height:100vh!important;
-    z-index:450;
-    width:260px!important;
-    min-width:260px!important;
-    padding-top:86px;
-    transition:transform .28s cubic-bezier(.4,0,.2,1)!important;
-    transform:translateX(0);
-  }
-  .sidebar.collapsed{
-    transform:translateX(-100%)!important;
-    width:260px!important;
-    min-width:260px!important;
-    overflow:auto!important;
-  }
-  .sidebar.collapsed .sb-content{opacity:1!important;pointer-events:auto!important;}
-  .sb-toggle{display:none!important;}
+/* Sidebar: fixed overlay */
+html.is-mob .sidebar{
+  position:fixed!important;top:0;left:0;
+  height:100vh!important;z-index:450;
+  width:80vw!important;max-width:280px!important;min-width:0!important;
+  padding-top:90px;
+  transition:transform .28s cubic-bezier(.4,0,.2,1)!important;
+  transform:translateX(0);
+}
+html.is-mob .sidebar.collapsed{
+  transform:translateX(-100%)!important;
+  overflow:auto!important;
+}
+html.is-mob .sidebar.collapsed .sb-content{opacity:1!important;pointer-events:auto!important;}
+html.is-mob .sb-toggle{display:none!important;}
 
-  /* ── Q area ── */
-  #q-area{padding:10px 10px 80px;}
-  .q-body{padding:14px 14px 0;}
-  .q-options{padding:0 12px 14px;gap:7px;}
-  .q-footer{padding:10px 14px;flex-wrap:wrap;gap:8px;}
-  .confirm-btn{min-width:0!important;flex:1;}
-  .skip-btn{flex:1;text-align:center;}
-  .q-vignette{font-size:13px;line-height:1.7;}
-  .opt-text{font-size:13px;}
+/* Q area */
+html.is-mob #q-area{padding:10px 10px 80px;}
+html.is-mob .q-body{padding:14px 14px 0;}
+html.is-mob .q-options{padding:0 12px 14px;gap:7px;}
+html.is-mob .q-footer{padding:10px 14px;flex-wrap:wrap;gap:8px;}
+html.is-mob .confirm-btn{min-width:0!important;flex:1;}
+html.is-mob .skip-btn{flex:1;text-align:center;}
+html.is-mob .q-vignette{font-size:13px;line-height:1.7;}
+html.is-mob .opt-text{font-size:13px;}
 
-  /* ── Input bar ── */
-  .input-bar{padding:8px 10px;}
-  #chat-input{font-size:16px!important;} /* prevent iOS keyboard zoom */
-  #send-btn{padding:10px 14px;font-size:12px;}
+/* Input bar */
+html.is-mob .input-bar{padding:8px 10px;}
+html.is-mob #chat-input{font-size:16px!important;}
+html.is-mob #send-btn{padding:10px 14px;font-size:12px;}
 
-  /* ── Modals ── */
-  .overlay{padding:0;align-items:flex-end;}
-  .modal{border-radius:18px 18px 0 0;padding:28px 20px 32px;max-width:100%;width:100%;}
-  .plan-modal{max-width:100%;border-radius:18px 18px 0 0;}
+/* Modals */
+html.is-mob .overlay{padding:0;align-items:flex-end;}
+html.is-mob .modal{border-radius:18px 18px 0 0;padding:28px 20px 32px;max-width:100%;width:100%;}
+html.is-mob .plan-modal{max-width:100%;border-radius:18px 18px 0 0;}
 
-  /* ── Lab modal ── */
-  .lab-overlay{padding:0;align-items:flex-end;}
-  .lab-modal{border-radius:18px 18px 0 0;max-width:100%;max-height:88vh;}
-  .lab-body{grid-template-columns:1fr;}
+/* Lab modal */
+html.is-mob .lab-overlay{padding:0;align-items:flex-end;}
+html.is-mob .lab-modal{border-radius:18px 18px 0 0;max-width:100%;max-height:88vh;}
+html.is-mob .lab-body{grid-template-columns:1fr;}
 
-  /* ── Drawers ── */
-  .drawer{width:100%!important;right:-100%!important;}
-  .drawer.open{right:0!important;}
-  .mn-drawer,.flag-drawer,.fc-drawer{width:100%!important;}
+/* Drawers */
+html.is-mob .drawer{width:100%!important;right:-100%!important;}
+html.is-mob .drawer.open{right:0!important;}
 
-  /* ── Tutor FAB ── */
-  .tutor-fab{bottom:72px;right:14px;}
-  .tutor-popup{width:min(320px,calc(100vw - 24px));max-height:380px;}
-  #fab-btn{width:52px;height:52px;font-size:28px;}
+/* Tutor FAB */
+html.is-mob .tutor-fab{bottom:72px;right:14px;}
+html.is-mob .tutor-popup{width:min(320px,calc(100vw - 24px));max-height:380px;}
+html.is-mob #fab-btn{width:52px;height:52px;font-size:28px;}
 
-  /* ── User msg ── */
-  .user-msg{max-width:88%;}
+/* Misc */
+html.is-mob .user-msg{max-width:88%;}
+html.is-mob .welcome-card{padding:20px 16px;}
+html.is-mob .welcome-card h2{font-size:16px;}
 
-  /* ── Chat body scrollbar ── */
-  ::-webkit-scrollbar{width:3px;}
-
-  /* ── Welcome card ── */
-  .welcome-card{padding:20px 16px;}
-  .welcome-card h2{font-size:16px;}
+/* @media fallback for non-UA cases */
+@media (max-width:768px){
+  html:not(.is-mob) .app-header{height:auto;flex-wrap:wrap;padding:6px 10px 4px;position:relative;z-index:500;}
+  html:not(.is-mob) .mob-menu-btn{display:block;}
+  html:not(.is-mob) .hdr-session,html:not(.is-mob) .hdr-stats,html:not(.is-mob) .hdr-name,html:not(.is-mob) .hdr-vsep{display:none;}
+  html:not(.is-mob) .sidebar{position:fixed!important;top:0;left:0;height:100vh!important;z-index:450;width:80vw!important;max-width:280px!important;min-width:0!important;padding-top:90px;transform:translateX(0);}
+  html:not(.is-mob) .sidebar.collapsed{transform:translateX(-100%)!important;}
+  html:not(.is-mob) .sb-toggle{display:none!important;}
 }
 
 /* Lab values modal */
@@ -628,7 +626,7 @@ body{font-family:'Inter',sans-serif;background:var(--page);color:var(--text);hei
 
   <div class="app-body">
     <!-- Sidebar -->
-    <aside class="sidebar" id="sidebar">
+    <aside class="sidebar collapsed" id="sidebar">
       <div class="sb-content">
       <div class="sb-section">
         <div class="sb-sec-title">Sistema</div>
@@ -1443,7 +1441,7 @@ function showToast(msg){
 }
 
 // ── SIDEBAR TOGGLE ──────────────────────────────────────────────────────────
-const isMobile = () => window.innerWidth <= 768;
+const isMobile = () => document.documentElement.classList.contains('is-mob') || window.innerWidth <= 900;
 let sidebarCollapsed = localStorage.getItem('sb_collapsed') === '1';
 
 function updateSidebarToggle(){
@@ -1455,10 +1453,13 @@ function updateSidebarToggle(){
 }
 
 function initSidebar(){
-  // Always start collapsed on mobile
+  // Sidebar starts as collapsed in HTML — only un-collapse on desktop if user had it open
+  if(!isMobile() && !sidebarCollapsed){
+    document.getElementById('sidebar')?.classList.remove('collapsed');
+  }
+  // On mobile: leave collapsed=true, keep the collapsed class
   if(isMobile()) sidebarCollapsed = true;
-  if(sidebarCollapsed) document.getElementById('sidebar')?.classList.add('collapsed');
-  updateSidebarToggle();
+  if(!isMobile()) updateSidebarToggle();
 }
 
 function toggleSidebar(){
