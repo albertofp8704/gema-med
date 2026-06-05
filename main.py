@@ -38,6 +38,78 @@ from agent import run_agent, run_agent_stream
 sessions: dict[str, list] = defaultdict(list)
 FRONTEND = Path(__file__).parent / "frontend.html"
 
+# Audit cache — resultado de la última auditoría de topics
+_audit_cache: dict = {}
+
+
+def _run_topic_audit(samples_per_topic: int = 20) -> dict:
+    """Auditoría de calidad de topics — verifica que cada pool retorne contenido correcto."""
+    from tools import get_usmle_question, TOPIC_KEYWORDS, _load_dataset
+    from collections import Counter
+    import random
+
+    ds = _load_dataset()
+    topic_sizes = Counter(q["topic"] for q in ds)
+    results = {}
+
+    for topic, kws in TOPIC_KEYWORDS.items():
+        ok = 0
+        for _ in range(samples_per_topic):
+            q = get_usmle_question(topic=topic)
+            if any(kw in q["question"].lower() for kw in kws):
+                ok += 1
+        pct = round(ok / samples_per_topic * 100, 1)
+        pool_label = topic_sizes.get(topic, 0)
+        pool_strict = sum(
+            1 for q in ds
+            if q["topic"] == topic
+            and any(kw in q["question"].lower() for kw in kws)
+        )
+        results[topic] = {
+            "accuracy": pct,
+            "ok": ok,
+            "samples": samples_per_topic,
+            "pool_label": pool_label,
+            "pool_strict": pool_strict,
+            "status": "PASS" if pct >= 80 else "WARN" if pct >= 60 else "FAIL",
+        }
+        if pct < 80:
+            print(f"[AUDIT] {topic}: {pct}% — BELOW THRESHOLD")
+
+    failed = [t for t, r in results.items() if r["status"] == "FAIL"]
+    warned = [t for t, r in results.items() if r["status"] == "WARN"]
+    return {
+        "timestamp": __import__("datetime").datetime.utcnow().isoformat(),
+        "topics": results,
+        "summary": {
+            "total": len(results),
+            "pass": len([r for r in results.values() if r["status"] == "PASS"]),
+            "warn": len(warned),
+            "fail": len(failed),
+            "failed_topics": failed,
+            "warned_topics": warned,
+        },
+    }
+
+
+async def _scheduled_audit_loop():
+    """Corre auditoría cada 24h en background."""
+    import asyncio
+    global _audit_cache
+    await asyncio.sleep(120)  # esperar 2 min después de startup (dataset cargando)
+    while True:
+        print("[AUDIT] Iniciando auditoría de topics...")
+        try:
+            result = await asyncio.to_thread(_run_topic_audit)
+            _audit_cache = result
+            s = result["summary"]
+            print(f"[AUDIT] Completada — PASS:{s['pass']} WARN:{s['warn']} FAIL:{s['fail']}")
+            if s["fail"] > 0:
+                print(f"[AUDIT] PROBLEMAS: {s['failed_topics']}")
+        except Exception as e:
+            print(f"[AUDIT] Error: {e}")
+        await asyncio.sleep(24 * 3600)  # repetir cada 24h
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -53,13 +125,14 @@ async def lifespan(app: FastAPI):
 
     channels = ["Web (http://localhost:8000)", "REST API (/docs)"]
     if telegram_started: channels.append("Telegram")
-    print(f"✅ GEMA-MED listo — {', '.join(channels)}")
+    print(f"OK GEMA-MED listo — {', '.join(channels)}")
 
-    # Precalentar el banco de preguntas en background (evita timeout en primera pregunta)
     import asyncio
     from tools import _load_dataset
     asyncio.create_task(asyncio.to_thread(_load_dataset))
-    print("⏳ Cargando banco de preguntas en background...")
+    asyncio.create_task(_scheduled_audit_loop())
+    print("Cargando banco de preguntas en background...")
+    print("Auditoria de topics programada (cada 24h, primera en 2 min)")
 
     yield
 
@@ -238,12 +311,37 @@ def frontend():
 
 @app.get("/health", tags=["system"])
 def health():
+    audit_summary = _audit_cache.get("summary", {})
     return {
-        "status": "ok", "version": "2.0.0",
-        "model": os.getenv("LLM_MODEL", "llama-3.3-70b-versatile"),
+        "status": "ok",
+        "version": "2.0.0",
+        "model": os.getenv("LLM_MODEL", "llama-3.1-8b-instant"),
         "telegram": bool(os.getenv("TELEGRAM_TOKEN")),
         "db": "postgresql" if os.getenv("DATABASE_URL") else "sqlite",
+        "topic_audit": {
+            "last_run": _audit_cache.get("timestamp", "pending"),
+            "pass": audit_summary.get("pass", "?"),
+            "warn": audit_summary.get("warn", "?"),
+            "fail": audit_summary.get("fail", "?"),
+            "failed_topics": audit_summary.get("failed_topics", []),
+        },
     }
+
+
+@app.get("/audit/topics", tags=["system"])
+async def audit_topics(samples: int = 20, force: bool = False):
+    """
+    Auditoría de calidad de topics.
+    - Usa cache (24h) por defecto.
+    - ?force=true para forzar re-ejecución inmediata.
+    - ?samples=N para cambiar número de muestras por topic (default 20).
+    """
+    global _audit_cache
+    if force or not _audit_cache:
+        import asyncio
+        result = await asyncio.to_thread(_run_topic_audit, samples)
+        _audit_cache = result
+    return _audit_cache
 
 
 @app.get("/progress/{user_id}", tags=["legacy"])
