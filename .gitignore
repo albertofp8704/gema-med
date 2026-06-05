@@ -23,3 +23,10 @@ frontend/.next/
 
 # Railway
 .railway/
+
+# Temp / dev files
+*_b64.txt
+*.backup
+fab_mockups.html
+audit_test.py
+progress_test*.py
