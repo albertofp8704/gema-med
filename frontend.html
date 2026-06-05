@@ -91,14 +91,13 @@ body{font-family:'Inter',sans-serif;background:var(--page);color:var(--text);hei
 .app-body{display:flex;flex:1;overflow:hidden;}
 
 /* Sidebar */
-.sidebar{width:220px;min-width:220px;background:var(--sidebar);display:flex;flex-direction:column;overflow-y:auto;flex-shrink:0;transition:width .25s cubic-bezier(.4,0,.2,1),min-width .25s cubic-bezier(.4,0,.2,1);position:relative;}
+.app-body{position:relative;}
+.sidebar{width:220px;min-width:220px;background:var(--sidebar);display:flex;flex-direction:column;overflow-y:auto;flex-shrink:0;transition:width .28s cubic-bezier(.4,0,.2,1),min-width .28s cubic-bezier(.4,0,.2,1);}
 .sidebar.collapsed{width:0;min-width:0;overflow:hidden;}
-.sb-toggle{position:absolute;top:50%;right:-14px;transform:translateY(-50%);z-index:100;width:14px;height:48px;background:var(--sidebar);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;border-radius:0 8px 8px 0;color:rgba(255,255,255,.5);font-size:10px;transition:all .2s;box-shadow:2px 0 8px rgba(0,0,0,.2);}
-.sidebar.collapsed .sb-toggle{right:-14px;border-radius:0 8px 8px 0;}
-.sb-toggle:hover{background:#1E3A6E;color:#fff;width:16px;}
-.sb-toggle-icon::before{content:'‹';font-size:14px;font-weight:700;line-height:1;}
-.sidebar.collapsed .sb-toggle-icon::before{content:'›';}
-.sidebar .sb-content{opacity:1;transition:opacity .15s;}
+.sb-toggle{position:fixed;top:50%;transform:translateY(-50%);z-index:200;left:220px;width:18px;height:52px;background:var(--sidebar);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;border-radius:0 9px 9px 0;color:rgba(255,255,255,.7);transition:left .28s cubic-bezier(.4,0,.2,1),width .15s,background .15s;box-shadow:3px 0 10px rgba(0,0,0,.3);}
+.sb-toggle:hover{background:#1E3A6E;color:#fff;width:22px;}
+.sb-toggle-icon{font-size:14px;font-weight:700;line-height:1;user-select:none;}
+.sidebar .sb-content{opacity:1;transition:opacity .18s;}
 .sidebar.collapsed .sb-content{opacity:0;pointer-events:none;}
 .sb-section{padding:12px 14px 6px;}
 .sb-sec-title{font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4B6A87;margin-bottom:8px;}
@@ -475,7 +474,6 @@ body{font-family:'Inter',sans-serif;background:var(--page);color:var(--text);hei
   <div class="app-body">
     <!-- Sidebar -->
     <aside class="sidebar" id="sidebar">
-      <button class="sb-toggle" onclick="toggleSidebar()" title="Colapsar panel"><span class="sb-toggle-icon"></span></button>
       <div class="sb-content">
       <div class="sb-section">
         <div class="sb-sec-title">Sistema</div>
@@ -545,6 +543,9 @@ body{font-family:'Inter',sans-serif;background:var(--page);color:var(--text);hei
       </div>
       </div><!-- end sb-content -->
     </aside>
+    <button class="sb-toggle" id="sb-toggle" onclick="toggleSidebar()" title="Colapsar / expandir panel">
+      <span class="sb-toggle-icon" id="sb-toggle-icon">‹</span>
+    </button>
 
     <!-- Main content -->
     <main class="content">
@@ -1234,14 +1235,23 @@ function showToast(msg){
 
 // ── SIDEBAR TOGGLE ──────────────────────────────────────────────────────────
 let sidebarCollapsed = localStorage.getItem('sb_collapsed') === '1';
+function updateSidebarToggle(){
+  const btn = document.getElementById('sb-toggle');
+  const icon = document.getElementById('sb-toggle-icon');
+  if(!btn) return;
+  btn.style.left = sidebarCollapsed ? '0px' : '220px';
+  if(icon) icon.textContent = sidebarCollapsed ? '›' : '‹';
+}
 function initSidebar(){
   if(sidebarCollapsed) document.getElementById('sidebar')?.classList.add('collapsed');
+  updateSidebarToggle();
 }
 function toggleSidebar(){
   const sb = document.getElementById('sidebar');
   sidebarCollapsed = !sidebarCollapsed;
   sb.classList.toggle('collapsed', sidebarCollapsed);
   localStorage.setItem('sb_collapsed', sidebarCollapsed ? '1' : '0');
+  updateSidebarToggle();
 }
 
 // ── STREAK ──────────────────────────────────────────────────────────────────
