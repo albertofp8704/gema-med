@@ -19,41 +19,69 @@ _dataset: list | None = None
 
 TOPIC_KEYWORDS: dict[str, list[str]] = {
     "cardiology":       ["heart", "cardiac", "coronary", "atrial", "ventricular", "myocardial",
-                          "aortic", "mitral", "pericarditis", "arrhythmia", "hypertension"],
+                          "aortic", "mitral", "pericarditis", "arrhythmia", "hypertension",
+                          "echocardiogram", "ejection fraction", "pacemaker", "endocarditis"],
     "pulmonology":      ["lung", "pulmonary", "respiratory", "bronchial", "asthma", "copd",
-                          "pneumonia", "pleural", "tuberculosis", "dyspnea"],
+                          "pneumonia", "pleural", "tuberculosis", "dyspnea", "spirometry",
+                          "bronchoscopy", "emphysema", "pneumothorax", "hemoptysis"],
     "nephrology":       ["kidney", "renal", "nephro", "glomerular", "urinary", "creatinine",
-                          "dialysis", "proteinuria", "hematuria", "acid-base"],
-    "neurology":        ["brain", "neurological", "cortex", "seizure", "stroke", "headache",
-                          "dementia", "parkinson", "nerve", "spinal", "meningitis", "cranial"],
+                          "dialysis", "proteinuria", "hematuria", "acid-base", "nephrotic",
+                          "nephritic", "cystitis", "pyelonephritis", "uremia"],
+    "neurology":        ["seizure", "stroke", "dementia", "parkinson", "neuropathy",
+                          "multiple sclerosis", "epilepsy", "encephalopathy", "nerve conduction",
+                          "cerebellar", "basal ganglia", "spinal cord", "myelopathy",
+                          "nystagmus", "aphasia", "ataxia", "neurodegenerative"],
     "gastroenterology": ["liver", "gastric", "intestinal", "bowel", "colon", "pancreas",
-                          "hepatic", "cirrhosis", "peptic", "diarrhea", "esophag"],
+                          "hepatic", "cirrhosis", "peptic ulcer", "diarrhea", "esophag",
+                          "gastrointestinal", "crohn", "colitis", "jaundice", "hepatitis",
+                          "cholecystitis", "cholelithiasis", "appendicitis"],
     "endocrinology":    ["diabetes", "thyroid", "adrenal", "insulin", "glucose", "cortisol",
-                          "pituitary", "hormone", "hypoglycemia", "cushing", "addison"],
+                          "pituitary", "hypoglycemia", "cushing", "addison", "hyperthyroid",
+                          "hypothyroid", "acromegaly", "hyperparathyroid", "glycated hemoglobin"],
     "hematology":       ["anemia", "coagulation", "platelet", "hemoglobin", "leukemia",
-                          "lymphoma", "bleeding", "thrombosis", "sickle", "thalassemia"],
-    "pharmacology":     ["drug", "medication", "inhibitor", "agonist", "receptor", "dose",
-                          "toxicity", "antidote", "side effect", "mechanism of action",
-                          "antibiotic", "analgesic", "antihypertensive", "statin"],
-    "microbiology":     ["bacteria", "virus", "fungal", "parasite", "antibiotic", "sepsis",
-                          "infection", "gram", "culture", "pathogen", "protozoa", "helminth"],
-    "pathology":        ["tumor", "cancer", "neoplasm", "malignant", "biopsy", "histology",
-                          "metastasis", "carcinoma", "sarcoma", "inflammation", "necrosis"],
+                          "lymphoma", "bleeding", "thrombosis", "sickle cell", "thalassemia",
+                          "polycythemia", "neutropenia", "bone marrow", "myeloma", "hemophilia"],
+    "pharmacology":     ["mechanism of action", "side effect", "contraindication", "drug interaction",
+                          "pharmacokinetics", "pharmacodynamics", "bioavailability", "half-life",
+                          "agonist", "antagonist", "beta blocker", "ace inhibitor", "statin",
+                          "antidepressant", "antipsychotic", "analgesic", "antihypertensive"],
+    "microbiology":     ["bacteria", "bacterial", "virus", "viral", "fungal", "fungus",
+                          "parasite", "gram positive", "gram negative", "gram stain",
+                          "culture", "pathogen", "protozoa", "helminth", "bacteremia",
+                          "antibiotic resistance", "mrsa", "streptococcus", "staphylococcus",
+                          "escherichia", "salmonella", "mycobacterium", "candida", "hiv",
+                          "hepatitis b", "hepatitis c", "influenza", "malaria"],
+    "pathology":        ["biopsy", "histology", "histological", "carcinoma", "sarcoma",
+                          "neoplasm", "malignant", "metastasis", "adenocarcinoma",
+                          "squamous cell", "lymph node biopsy", "immunohistochemistry",
+                          "microscopy", "pathognomonic", "dysplasia"],
     "ob_gyn":           ["pregnant", "fetal", "uterine", "ovarian", "menstrual", "contraception",
-                          "gestational", "obstetric", "gynecological", "preeclampsia"],
-    "pediatrics":       ["child", "infant", "neonatal", "developmental", "vaccination", "growth",
-                          "congenital", "pediatric", "adolescent", "newborn"],
-    "psychiatry":       ["depression", "anxiety", "schizophrenia", "bipolar", "psychosis",
-                          "suicide", "cognitive", "psychiatric", "mental", "dsm"],
+                          "gestational", "obstetric", "gynecological", "preeclampsia",
+                          "placenta", "amniotic", "cervical", "pelvic inflammatory",
+                          "ectopic pregnancy", "postpartum"],
+    "pediatrics":       ["child", "infant", "neonatal", "developmental", "vaccination",
+                          "congenital", "pediatric", "adolescent", "newborn", "age-appropriate",
+                          "growth chart", "failure to thrive", "childhood", "born at"],
+    "psychiatry":       ["schizophrenia", "bipolar disorder", "major depressive", "psychosis",
+                          "suicidal", "psychiatric", "dsm", "cognitive behavioral",
+                          "antipsychotic", "ssri", "lithium", "hallucination", "delusion",
+                          "mania", "phobia", "ptsd", "obsessive compulsive"],
     "biostatistics":    ["sensitivity", "specificity", "p-value", "confidence interval",
-                          "relative risk", "odds ratio", "prevalence", "incidence", "bias",
-                          "randomized", "cohort", "cross-sectional", "number needed"],
-    "anatomy":          ["anatomy", "histology", "embryology", "nerve supply", "blood supply",
-                          "lymphatic", "ligament", "tendon", "foramen", "artery"],
-    "physiology":       ["physiology", "homeostasis", "membrane potential", "action potential",
-                          "osmolarity", "filtration", "secretion", "absorption", "regulation"],
-    "biochemistry":     ["biochemistry", "enzyme", "metabolism", "protein", "dna", "rna",
-                          "gene", "metabolic", "amino acid", "fatty acid", "glycolysis", "krebs"],
+                          "relative risk", "odds ratio", "number needed to treat",
+                          "positive predictive", "negative predictive", "likelihood ratio",
+                          "randomized controlled", "cohort study", "case-control",
+                          "intention to treat", "chi-square", "type i error", "type ii error"],
+    "anatomy":          ["nerve supply", "blood supply", "lymphatic drainage", "ligament",
+                          "tendon", "foramen", "embryology", "dermatome", "muscle innervation",
+                          "anatomical", "origin and insertion", "fascia", "periosteum"],
+    "physiology":       ["membrane potential", "action potential", "osmolarity",
+                          "starling", "fick", "henderson-hasselbalch", "frank-starling",
+                          "baroreceptor", "chemoreceptor", "renin-angiotensin",
+                          "glomerular filtration rate", "fick equation"],
+    "biochemistry":     ["enzyme", "glycolysis", "krebs cycle", "oxidative phosphorylation",
+                          "dna replication", "mrna", "transcription", "translation",
+                          "amino acid", "fatty acid oxidation", "gluconeogenesis",
+                          "urea cycle", "purine", "pyrimidine", "coenzyme"],
 }
 
 # ── MedMCQA subject → nuestro topic ──────────────────────────────────────────
@@ -66,19 +94,19 @@ MEDMCQA_SUBJECT_MAP: dict[str, str] = {
     "Anatomy":                       "anatomy",
     "Physiology":                    "physiology",
     "Biochemistry":                  "biochemistry",
-    "Surgery":                       "gastroenterology",
+    "Surgery":                       "general",        # era gastroenterology — demasiado amplio
     "Obstetrics & Gynaecology":      "ob_gyn",
     "Paediatrics":                   "pediatrics",
     "Psychiatry":                    "psychiatry",
-    "Ophthalmology":                 "neurology",
-    "ENT":                           "neurology",
-    "Orthopaedics":                  "anatomy",
-    "Radiology":                     "pathology",
-    "Dermatology":                   "pathology",
+    "Ophthalmology":                 "general",        # era neurology — incorrecto
+    "ENT":                           "general",        # era neurology — incorrecto
+    "Orthopaedics":                  "general",        # era anatomy — se refina por keywords
+    "Radiology":                     "general",        # era pathology — demasiado genérico
+    "Dermatology":                   "general",        # se refina por keywords
     "Anaesthesia":                   "pharmacology",
     "Forensic Medicine":             "biostatistics",
     "Social & Preventive Medicine":  "biostatistics",
-    "Dental":                        "pathology",
+    "Dental":                        "general",        # era pathology — incorrecto
 }
 
 
@@ -201,23 +229,35 @@ def _load_dataset() -> list[dict]:
 
 def get_usmle_question(topic: str | None = None, step: str | None = None) -> dict:
     """
-    Devuelve una pregunta aleatoria del banco combinado (110k preguntas).
-    Filtra por tema (topic) y step si se especifican.
+    Devuelve una pregunta aleatoria del banco combinado.
+    Doble filtro: label == topic AND contenido contiene keywords del topic.
+    Fallback a solo label si no hay suficientes con doble filtro.
     """
     dataset = _load_dataset()
     candidates = dataset
 
-    # Filtrar por topic
     if topic and topic.lower() in TOPIC_KEYWORDS:
         t = topic.lower()
-        # Primero por campo topic exacto
-        by_field = [q for q in candidates if q["topic"] == t]
-        # Fallback: búsqueda por keywords en el texto
-        if not by_field:
-            kws = TOPIC_KEYWORDS[t]
-            by_field = [q for q in candidates if any(kw in q["question"].lower() for kw in kws)]
-        if by_field:
-            candidates = by_field
+        kws = TOPIC_KEYWORDS[t]
+
+        # 1. Doble filtro: label correcto + al menos 1 keyword en el texto
+        strict = [q for q in candidates
+                  if q["topic"] == t
+                  and any(kw in q["question"].lower() for kw in kws)]
+
+        # 2. Solo label (fallback si hay pocas con doble filtro)
+        by_label = [q for q in candidates if q["topic"] == t]
+
+        # 3. Solo keywords en texto (sin importar label, último recurso)
+        by_kw = [q for q in candidates
+                 if any(kw in q["question"].lower() for kw in kws)]
+
+        if len(strict) >= 20:
+            candidates = strict
+        elif len(by_label) >= 10:
+            candidates = by_label
+        elif by_kw:
+            candidates = by_kw
 
     if not candidates:
         candidates = dataset
