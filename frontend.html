@@ -375,6 +375,26 @@ body{font-family:'Inter',sans-serif;background:var(--page);color:var(--text);hei
 .fc-quick-btn{background:var(--blue-lt);color:var(--blue);border:1px solid #BFDBFE;border-radius:7px;padding:8px 14px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .15s;}
 .fc-quick-btn:hover{background:var(--blue);color:#fff;}
 
+/* Lab values modal */
+.lab-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:900;display:none;align-items:center;justify-content:center;padding:16px;}
+.lab-overlay.open{display:flex;}
+.lab-modal{background:#fff;border-radius:14px;width:100%;max-width:820px;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 24px 64px rgba(0,0,0,.3);}
+.lab-modal-hdr{display:flex;align-items:center;padding:16px 20px;border-bottom:1px solid var(--border);gap:12px;flex-shrink:0;}
+.lab-modal-title{font-size:16px;font-weight:700;color:var(--text);flex:1;}
+.lab-search{border:1px solid var(--border);border-radius:7px;padding:6px 12px;font-size:13px;width:180px;outline:none;font-family:inherit;color:var(--text);}
+.lab-search:focus{border-color:var(--blue);}
+.lab-modal-close{background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted);padding:0 4px;line-height:1;}
+.lab-modal-close:hover{color:var(--text);}
+.lab-body{overflow-y:auto;padding:16px 20px;display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;align-content:start;}
+.lab-section{border:1px solid var(--border);border-radius:9px;overflow:hidden;}
+.lab-section-title{background:var(--bg);padding:7px 12px;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;border-bottom:1px solid var(--border);}
+.lab-row{display:flex;align-items:baseline;padding:5px 12px;font-size:12px;border-bottom:1px solid #f8fafc;gap:6px;}
+.lab-row:last-child{border-bottom:none;}
+.lab-name{flex:1;color:var(--text);font-weight:500;}
+.lab-range{color:#1e40af;font-weight:600;font-size:11px;white-space:nowrap;}
+.lab-unit{color:var(--muted);font-size:10px;white-space:nowrap;}
+.lab-row.hidden-row{display:none;}
+
 /* Difficulty badge */
 .q-difficulty{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;padding:2px 8px;border-radius:10px;margin-left:6px;vertical-align:middle;}
 .q-difficulty.easy  {background:#d1fae5;color:#065f46;}
@@ -472,6 +492,7 @@ body{font-family:'Inter',sans-serif;background:var(--page);color:var(--text);hei
       <div class="hdr-vsep"></div>
       <!-- Links externos -->
       <button class="hdr-ext" onclick="openMnemonics()" title="Mnemonics USMLE — High-yield por tema">🧠 Mnemonics</button>
+      <button class="hdr-ext" onclick="openLab()" title="Lab Values — Rangos de referencia USMLE">🧪 Lab Values</button>
       <button class="hdr-ext" onclick="window.open('https://apps.ankiweb.net','_blank')" title="AnkiWeb — Repetición espaciada">🃏 Anki</button>
       <button class="hdr-ext" onclick="window.open('https://www.nbme.org/','_blank')" title="NBME Self-Assessments oficiales">📝 NBME</button>
       <button class="hdr-ext" onclick="window.open('https://www.amboss.com','_blank')" title="Amboss Q-Bank">🔬 Amboss</button>
@@ -624,6 +645,18 @@ body{font-family:'Inter',sans-serif;background:var(--page);color:var(--text);hei
     <button id="fab-btn" onclick="toggleTutor()" title="Dr. GEMA — USMLE Tutor">
       👨‍⚕️<span class="fab-online"></span>
     </button>
+  </div>
+</div>
+
+<!-- ── LAB VALUES MODAL ── -->
+<div class="lab-overlay" id="lab-overlay" onclick="if(event.target===this)closeLab()">
+  <div class="lab-modal">
+    <div class="lab-modal-hdr">
+      <span class="lab-modal-title">🧪 Lab Reference Values — USMLE</span>
+      <input class="lab-search" id="lab-search" type="search" placeholder="Search..." oninput="filterLab(this.value)">
+      <button class="lab-modal-close" onclick="closeLab()">×</button>
+    </div>
+    <div class="lab-body" id="lab-body"></div>
   </div>
 </div>
 
@@ -1404,6 +1437,195 @@ function closeMnDrawer(){
 function renderMd(s){
   return esc(s).replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>').replace(/\n/g,'<br>');
 }
+
+// ── LAB VALUES ────────────────────────────────────────────────────────────────
+const LAB_DATA=[
+  {cat:"Basic Metabolic Panel",rows:[
+    {n:"Sodium (Na⁺)",r:"136–145",u:"mEq/L"},
+    {n:"Potassium (K⁺)",r:"3.5–5.0",u:"mEq/L"},
+    {n:"Chloride (Cl⁻)",r:"98–106",u:"mEq/L"},
+    {n:"Bicarbonate (HCO₃⁻)",r:"22–28",u:"mEq/L"},
+    {n:"BUN",r:"7–20",u:"mg/dL"},
+    {n:"Creatinine",r:"0.6–1.2",u:"mg/dL"},
+    {n:"Glucose (fasting)",r:"70–100",u:"mg/dL"},
+    {n:"Calcium (total)",r:"8.5–10.2",u:"mg/dL"},
+    {n:"Anion Gap",r:"8–12",u:"mEq/L"},
+    {n:"Osmolality (serum)",r:"275–295",u:"mOsm/kg"},
+  ]},
+  {cat:"Liver / LFTs",rows:[
+    {n:"ALT (SGPT)",r:"7–56",u:"U/L"},
+    {n:"AST (SGOT)",r:"10–40",u:"U/L"},
+    {n:"Alkaline Phosphatase",r:"44–147",u:"U/L"},
+    {n:"Total Bilirubin",r:"0.1–1.2",u:"mg/dL"},
+    {n:"Direct Bilirubin",r:"0–0.3",u:"mg/dL"},
+    {n:"Albumin",r:"3.5–5.0",u:"g/dL"},
+    {n:"Total Protein",r:"6.3–8.2",u:"g/dL"},
+    {n:"GGT",r:"8–61",u:"U/L"},
+    {n:"LDH",r:"140–280",u:"U/L"},
+  ]},
+  {cat:"CBC",rows:[
+    {n:"WBC",r:"4,500–11,000",u:"/μL"},
+    {n:"RBC (male)",r:"4.5–5.9",u:"×10⁶/μL"},
+    {n:"RBC (female)",r:"4.1–5.1",u:"×10⁶/μL"},
+    {n:"Hemoglobin (male)",r:"13.5–17.5",u:"g/dL"},
+    {n:"Hemoglobin (female)",r:"12.0–15.5",u:"g/dL"},
+    {n:"Hematocrit (male)",r:"41–53",u:"%"},
+    {n:"Hematocrit (female)",r:"36–46",u:"%"},
+    {n:"MCV",r:"80–100",u:"fL"},
+    {n:"MCH",r:"27–33",u:"pg"},
+    {n:"MCHC",r:"31–37",u:"g/dL"},
+    {n:"Platelets",r:"150,000–400,000",u:"/μL"},
+    {n:"Reticulocytes",r:"0.5–1.5",u:"%"},
+  ]},
+  {cat:"Differntial (WBC%)",rows:[
+    {n:"Neutrophils",r:"54–62",u:"%"},
+    {n:"Lymphocytes",r:"25–33",u:"%"},
+    {n:"Monocytes",r:"3–7",u:"%"},
+    {n:"Eosinophils",r:"1–3",u:"%"},
+    {n:"Basophils",r:"0–1",u:"%"},
+    {n:"Bands",r:"3–5",u:"%"},
+  ]},
+  {cat:"Coagulation",rows:[
+    {n:"PT",r:"11–15",u:"sec"},
+    {n:"PTT (aPTT)",r:"25–40",u:"sec"},
+    {n:"INR (therapeutic)",r:"2.0–3.0",u:""},
+    {n:"Bleeding time",r:"2–9",u:"min"},
+    {n:"Fibrinogen",r:"200–400",u:"mg/dL"},
+    {n:"D-dimer",r:"<0.5",u:"μg/mL FEU"},
+    {n:"Thrombin time",r:"11–18",u:"sec"},
+  ]},
+  {cat:"Iron Studies",rows:[
+    {n:"Serum Iron",r:"60–170",u:"μg/dL"},
+    {n:"TIBC",r:"240–450",u:"μg/dL"},
+    {n:"Transferrin Saturation",r:"20–50",u:"%"},
+    {n:"Ferritin (male)",r:"12–300",u:"ng/mL"},
+    {n:"Ferritin (female)",r:"12–150",u:"ng/mL"},
+    {n:"Serum B12",r:"200–900",u:"pg/mL"},
+    {n:"Folate (serum)",r:"2.5–20",u:"ng/mL"},
+  ]},
+  {cat:"Cardiac Markers",rows:[
+    {n:"Troponin I",r:"<0.04",u:"ng/mL"},
+    {n:"Troponin T (hsTnT)",r:"<14",u:"ng/L"},
+    {n:"CK-MB",r:"<5",u:"ng/mL"},
+    {n:"CK (total, male)",r:"55–170",u:"U/L"},
+    {n:"CK (total, female)",r:"30–135",u:"U/L"},
+    {n:"BNP",r:"<100",u:"pg/mL"},
+    {n:"NT-proBNP",r:"<125",u:"pg/mL"},
+    {n:"Myoglobin",r:"<90",u:"ng/mL"},
+  ]},
+  {cat:"Lipid Panel",rows:[
+    {n:"Total Cholesterol",r:"<200",u:"mg/dL"},
+    {n:"LDL",r:"<100 (optimal)",u:"mg/dL"},
+    {n:"HDL (male)",r:">40",u:"mg/dL"},
+    {n:"HDL (female)",r:">50",u:"mg/dL"},
+    {n:"Triglycerides",r:"<150",u:"mg/dL"},
+  ]},
+  {cat:"Thyroid",rows:[
+    {n:"TSH",r:"0.4–4.0",u:"mIU/L"},
+    {n:"Free T4",r:"0.8–1.8",u:"ng/dL"},
+    {n:"Free T3",r:"2.3–4.2",u:"pg/mL"},
+    {n:"Total T4",r:"5–12",u:"μg/dL"},
+    {n:"Total T3",r:"80–180",u:"ng/dL"},
+  ]},
+  {cat:"ABG (Arterial)",rows:[
+    {n:"pH",r:"7.35–7.45",u:""},
+    {n:"PaO₂",r:"75–100",u:"mmHg"},
+    {n:"PaCO₂",r:"35–45",u:"mmHg"},
+    {n:"HCO₃⁻",r:"22–28",u:"mEq/L"},
+    {n:"O₂ Saturation",r:"95–100",u:"%"},
+    {n:"Base excess",r:"−2 to +2",u:"mEq/L"},
+  ]},
+  {cat:"Renal / Urinalysis",rows:[
+    {n:"Urine pH",r:"4.5–8.0",u:""},
+    {n:"Urine specific gravity",r:"1.003–1.030",u:""},
+    {n:"Urine protein",r:"<150",u:"mg/day"},
+    {n:"Urine creatinine",r:"800–2000",u:"mg/day"},
+    {n:"GFR (CKD-EPI normal)",r:">60",u:"mL/min/1.73m²"},
+    {n:"Urine osmolality",r:"50–1200",u:"mOsm/kg"},
+    {n:"Urine Na⁺",r:"20–40",u:"mEq/L"},
+    {n:"FENa",r:"<1% (prerenal)",u:"%"},
+  ]},
+  {cat:"Endocrine",rows:[
+    {n:"Fasting insulin",r:"2–25",u:"μIU/mL"},
+    {n:"HbA1c (normal)",r:"<5.7",u:"%"},
+    {n:"HbA1c (pre-diabetes)",r:"5.7–6.4",u:"%"},
+    {n:"HbA1c (diabetes)",r:"≥6.5",u:"%"},
+    {n:"Cortisol (AM)",r:"6–23",u:"μg/dL"},
+    {n:"ACTH (AM)",r:"7–69",u:"pg/mL"},
+    {n:"Aldosterone (upright)",r:"5–30",u:"ng/dL"},
+    {n:"Renin (upright)",r:"0.2–3.3",u:"ng/mL/hr"},
+    {n:"PTH (intact)",r:"10–65",u:"pg/mL"},
+  ]},
+  {cat:"Cerebrospinal Fluid",rows:[
+    {n:"Opening pressure",r:"70–180",u:"mmH₂O"},
+    {n:"WBC",r:"0–5",u:"/μL (lymphocytes)"},
+    {n:"Protein",r:"15–45",u:"mg/dL"},
+    {n:"Glucose",r:"45–75",u:"mg/dL"},
+    {n:"CSF:serum glucose",r:">0.6",u:"ratio"},
+    {n:"Xanthochromia",r:"absent",u:""},
+  ]},
+  {cat:"Pancreas / GI",rows:[
+    {n:"Amylase",r:"25–125",u:"U/L"},
+    {n:"Lipase",r:"10–140",u:"U/L"},
+    {n:"Ammonia",r:"15–45",u:"μmol/L"},
+    {n:"Stool guaiac",r:"negative",u:""},
+  ]},
+  {cat:"Vitamins & Minerals",rows:[
+    {n:"Vitamin D (25-OH)",r:"20–50",u:"ng/mL"},
+    {n:"Vitamin B12",r:"200–900",u:"pg/mL"},
+    {n:"Folate",r:"2.5–20",u:"ng/mL"},
+    {n:"Magnesium",r:"1.7–2.2",u:"mg/dL"},
+    {n:"Phosphorus",r:"2.5–4.5",u:"mg/dL"},
+    {n:"Uric acid (male)",r:"3.4–7.0",u:"mg/dL"},
+    {n:"Uric acid (female)",r:"2.4–6.0",u:"mg/dL"},
+  ]},
+];
+
+let _labBuilt=false;
+function openLab(){
+  const ov=document.getElementById('lab-overlay');
+  ov.classList.add('open');
+  document.getElementById('lab-search').value='';
+  if(!_labBuilt){buildLabBody();_labBuilt=true;}
+  else filterLab('');
+  setTimeout(()=>document.getElementById('lab-search').focus(),100);
+}
+function closeLab(){document.getElementById('lab-overlay').classList.remove('open');}
+
+function buildLabBody(){
+  const body=document.getElementById('lab-body');
+  body.innerHTML=LAB_DATA.map((s,si)=>`
+    <div class="lab-section" data-si="${si}">
+      <div class="lab-section-title">${esc(s.cat)}</div>
+      ${s.rows.map((r,ri)=>`
+        <div class="lab-row" data-si="${si}" data-ri="${ri}">
+          <span class="lab-name">${esc(r.n)}</span>
+          <span class="lab-range">${esc(r.r)}</span>
+          <span class="lab-unit">${esc(r.u)}</span>
+        </div>`).join('')}
+    </div>`).join('');
+}
+
+function filterLab(q){
+  if(!_labBuilt)return;
+  const lq=q.toLowerCase().trim();
+  LAB_DATA.forEach((s,si)=>{
+    let secVisible=false;
+    s.rows.forEach((r,ri)=>{
+      const row=document.querySelector(`.lab-row[data-si="${si}"][data-ri="${ri}"]`);
+      if(!row)return;
+      const match=!lq||r.n.toLowerCase().includes(lq)||r.r.toLowerCase().includes(lq)||s.cat.toLowerCase().includes(lq);
+      row.classList.toggle('hidden-row',!match);
+      if(match)secVisible=true;
+    });
+    const sec=document.querySelector(`.lab-section[data-si="${si}"]`);
+    if(sec)sec.style.display=secVisible?'':'none';
+  });
+}
+
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape')closeLab();
+});
 
 // ── FLAGGED QUESTIONS ────────────────────────────────────────────────────────
 let flagged=JSON.parse(localStorage.getItem('gema_flagged')||'[]');
