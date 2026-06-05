@@ -229,6 +229,13 @@ body{font-family:'Inter',sans-serif;background:var(--page);color:var(--text);hei
 
 ::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:#CBD5E1;border-radius:3px}
 
+/* ── DAYANA BAR ── */
+.dayana-bar{display:flex;align-items:center;gap:10px;padding:12px 14px;background:linear-gradient(135deg,rgba(27,94,190,.15),rgba(96,165,250,.08));border-top:1px solid rgba(255,255,255,.06);border-bottom:1px solid rgba(255,255,255,.06);}
+.dayana-avatar{width:40px;height:40px;border-radius:50%;object-fit:cover;object-position:top;border:2px solid rgba(248,180,217,.6);box-shadow:0 0 12px rgba(248,180,217,.3);flex-shrink:0;}
+.dayana-info{display:flex;flex-direction:column;gap:1px;}
+.dayana-name{font-size:13px;font-weight:700;color:#F9A8D4;letter-spacing:-.2px;}
+.dayana-label{font-size:10px;color:rgba(255,255,255,.4);letter-spacing:.3px;}
+
 /* ── TUTOR FAB — Avatar + Dark Premium ── */
 .tutor-fab{position:fixed;bottom:88px;right:24px;z-index:500;display:flex;flex-direction:column;align-items:flex-end;gap:12px;}
 
@@ -367,7 +374,7 @@ body{font-family:'Inter',sans-serif;background:var(--page);color:var(--text);hei
 <!-- ── AUTH OVERLAY ── -->
 <div id="auth-overlay" class="overlay">
   <div class="modal">
-    <div class="modal-logo"><span>🩺</span><h1>GEMA-MED</h1><p>Tutor IA para USMLE Step 1 / 2 CK / 3</p></div>
+    <div class="modal-logo"><span>🩺</span><h1>GEMA-MED</h1><p>Tutor IA para USMLE Step 1 / 2 CK / 3</p><p style="font-size:11px;color:#F9A8D4;margin-top:6px;font-style:italic;">🌹 Por Dayana</p></div>
     <div class="tabs">
       <button class="tab active" onclick="authTab('login')">Ingresar</button>
       <button class="tab" onclick="authTab('register')">Registro</button>
@@ -1119,6 +1126,14 @@ async function tutorSend(){
   const inp=document.getElementById('tp-input');
   const msg=inp.value.trim();if(!msg||tutorBusy)return;
   inp.value='';inp.style.height='auto';
+  // Easter egg — Dayana
+  if(/dayana/i.test(msg)){
+    tpAppend(msg,'user');
+    setTimeout(()=>{
+      tpAppend('🌹 Saludos a Dayana — la inspiración detrás de cada pregunta que respondes. Sigue adelante, Alberto, ella está orgullosa de ti. 💪','bot');
+    },600);
+    return;
+  }
   await tutorAsk(msg);
 }
 
