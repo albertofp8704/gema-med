@@ -76,8 +76,17 @@ body{font-family:'Inter',sans-serif;background:var(--page);color:var(--text);hei
 .app-header{background:var(--header);height:52px;display:flex;align-items:center;padding:0 16px 0 0;gap:0;flex-shrink:0;}
 .hdr-logo{padding:0 20px;font-size:17px;font-weight:700;color:#fff;white-space:nowrap;border-right:1px solid rgba(255,255,255,.1);}
 .hdr-logo span{color:#60A5FA;}
-.hdr-session{flex:1;padding:0 16px;font-size:13px;color:rgba(255,255,255,.6);}
+.hdr-session{padding:0 12px;font-size:13px;color:rgba(255,255,255,.6);}
 .hdr-session strong{color:#fff;}
+.hdr-search-wrap{flex:1;display:flex;align-items:center;padding:0 12px;}
+.hdr-search-box{display:flex;align-items:center;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);border-radius:20px;padding:0 12px;gap:6px;height:30px;width:200px;transition:width .25s,background .2s;}
+.hdr-search-box:focus-within{background:rgba(255,255,255,.18);border-color:rgba(255,255,255,.35);width:280px;}
+.hdr-search-icon{color:rgba(255,255,255,.5);font-size:13px;flex-shrink:0;cursor:pointer;}
+.hdr-search-input{background:none;border:none;outline:none;color:#fff;font-size:13px;width:100%;font-family:inherit;}
+.hdr-search-input::placeholder{color:rgba(255,255,255,.4);}
+.hdr-search-clear{background:none;border:none;color:rgba(255,255,255,.4);cursor:pointer;font-size:14px;padding:0;line-height:1;display:none;}
+.hdr-search-clear.show{display:block;}
+.hdr-search-clear:hover{color:#fff;}
 .hdr-stats{display:flex;gap:12px;padding:0 16px;border-left:1px solid rgba(255,255,255,.1);}
 .hdr-chip{font-size:12px;color:rgba(255,255,255,.65);}
 .hdr-chip b{color:#fff;}
@@ -474,6 +483,19 @@ body{font-family:'Inter',sans-serif;background:var(--page);color:var(--text);hei
     <div class="hdr-logo">🩺 <span>GEMA</span>-MED</div>
     <div class="hdr-session"><strong id="hdr-week">USMLE Tutor</strong> <span id="hdr-phase"></span></div>
 
+    <!-- SEARCH -->
+    <div class="hdr-search-wrap">
+      <div class="hdr-search-box">
+        <span class="hdr-search-icon" onclick="hdrSearchSubmit()">🔍</span>
+        <input class="hdr-search-input" id="hdr-search-input" type="text"
+          placeholder="Buscar tema, fármaco, patología..."
+          maxlength="120"
+          onkeydown="if(event.key==='Enter')hdrSearchSubmit()"
+          oninput="document.getElementById('hdr-search-clear').classList.toggle('show',this.value.length>0)">
+        <button class="hdr-search-clear" id="hdr-search-clear" onclick="hdrSearchClear()" title="Borrar">×</button>
+      </div>
+    </div>
+
     <!-- TOOLS -->
     <div class="hdr-tools">
       <!-- Racha -->
@@ -861,6 +883,22 @@ function setStep(s){activeStep=s;['sp1','sp2','sp3'].forEach((id,i)=>document.ge
 
 // QUESTION FLOW
 let questionCount=0;
+
+function hdrSearchSubmit(){
+  const inp=document.getElementById('hdr-search-input');
+  const q=inp.value.trim();
+  if(!q)return;
+  inp.blur();
+  askQuestion('Give me a USMLE question about: '+q);
+  inp.value='';
+  document.getElementById('hdr-search-clear').classList.remove('show');
+}
+function hdrSearchClear(){
+  const inp=document.getElementById('hdr-search-input');
+  inp.value='';
+  document.getElementById('hdr-search-clear').classList.remove('show');
+  inp.focus();
+}
 
 function newQuestion(topic,step){
   topic=topic||activeTopic||'';
