@@ -60,44 +60,29 @@ def _detect_intent(text: str) -> str:
     return "general"
 
 
-# ── Fast path: 1 llamada Groq sin tool calls ──────────────────────────────────
+# ── Question formatter — NO LLM, 100% determinístico ─────────────────────────
+
+def _format_question(q: dict, display_topic: str, step_num: str) -> str:
+    """Formatea la pregunta directamente en Python sin pasar por Groq.
+    Elimina el problema de que el LLM ignore la pregunta y genere la suya.
+    """
+    opts = "\n".join(f"{k}) {v}" for k, v in q["options"].items())
+    return (
+        f"**USMLE Step {step_num} — {display_topic}**\n\n"
+        f"{q['question']}\n\n"
+        f"**Which of the following is the most appropriate answer?**\n\n"
+        f"{opts}\n\n"
+        f"*(Write your answer: A, B, C, or D)*"
+    )
+
 
 async def _fast_question(session_id: str, history: list, topic: str | None, step: str | None) -> str:
-    """Fetch pregunta en Python + 1 Groq call para formatearla. Evita 1 roundtrip."""
+    """Fetch pregunta del dataset y formatear directo — sin llamada a Groq."""
     q = get_usmle_question(topic=topic, step=step)
-    _session_last_question[session_id] = q  # store for save_result after answer
-
+    _session_last_question[session_id] = q
     display_topic = (topic or q["topic"]).replace("_", " ").title()
     step_num = step.replace("step","") if step else "1"
-
-    opts_text = "\n".join(f"{k}) {v}" for k, v in q["options"].items())
-    q_block = (
-        f"PREGUNTA DISPONIBLE (ID: {q['id']} | Tema: {display_topic}):\n"
-        f"{q['question']}\n\nOpciones:\n{opts_text}\n"
-        f"Respuesta correcta: {q['correct_letter']}) {q['correct_answer']}\n"
-        f"Explicación base: {q.get('explanation','')[:300]}"
-    )
-
-    system = (
-        SYSTEM_PROMPT.replace("{session_id}", session_id)
-        + f"\n\n---\n{q_block}\n---\n"
-        + f"INSTRUCCION OBLIGATORIA: Presenta la pregunta en formato UWorld. "
-        + f"La primera línea del output DEBE ser: **USMLE Step {step_num} — {display_topic}**"
-        + f"\nNO uses ningún otro tema. NO reveles la respuesta correcta. "
-        + "Termina con '*(Escribe tu respuesta: A, B, C o D)*'"
-    )
-
-    resp = await client.chat.completions.create(
-        model=MODEL,
-        messages=[
-            {"role": "system", "content": system},
-            *history[:-1],  # sin el último mensaje del usuario
-            {"role": "user",   "content": "Presenta la siguiente pregunta USMLE."},
-        ],
-        max_tokens=700,
-        temperature=0.2,
-    )
-    return resp.choices[0].message.content or ""
+    return _format_question(q, display_topic, step_num)
 
 
 async def _fast_explanation(session_id: str, history: list, letter: str) -> str:
@@ -286,35 +271,15 @@ async def run_agent_stream(session_id: str, history: list[dict], user_message: s
 
             q = get_usmle_question(topic=topic, step=step)
             _session_last_question[session_id] = q
-
-            # Use the REQUESTED topic as the display label (not Groq's guess)
             display_topic = (topic or q["topic"]).replace("_", " ").title()
             step_num = step.replace("step","") if step else "1"
 
-            opts_text = "\n".join(f"{k}) {v}" for k, v in q["options"].items())
-            # Use display_topic in q_block so the model sees the CORRECT label in context
-            q_block = (
-                f"\n\nPREGUNTA (ID:{q['id']} | Tema:{display_topic}):\n"
-                f"{q['question']}\n\nOpciones:\n{opts_text}\n"
-                f"Respuesta correcta: {q['correct_letter']}) {q['correct_answer']}\n"
-                f"Explicación base: {q.get('explanation','')[:300]}"
-            )
-            system = (
-                SYSTEM_PROMPT.replace("{session_id}", session_id) + lang_note + q_block
-                + f"\n\nINSTRUCCION OBLIGATORIA: Presenta la pregunta en formato UWorld. "
-                + f"La primera línea del output DEBE ser: **USMLE Step {step_num} — {display_topic}**"
-                + f"\nNO uses ningún otro tema. NO reveles la respuesta. "
-                + "Termina con '*(Escribe tu respuesta: A, B, C o D)*'"
-            )
-            stream = await client.chat.completions.create(
-                model=MODEL,
-                messages=[
-                    {"role": "system", "content": system},
-                    *history[:-1],
-                    {"role": "user", "content": "Presenta la siguiente pregunta USMLE."},
-                ],
-                stream=True, max_tokens=700, temperature=0.2,
-            )
+            # Formato DIRECTO en Python — sin Groq, sin alucinaciones, sin latencia extra
+            formatted = _format_question(q, display_topic, step_num)
+            full_text = formatted
+            history.append({"role": "assistant", "content": formatted})
+            yield formatted
+            return  # no stream needed
 
         elif intent == "answer":
             stream = await client.chat.completions.create(
