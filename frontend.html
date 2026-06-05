@@ -75,12 +75,12 @@ body{font-family:'Inter',sans-serif;background:var(--page);color:var(--text);hei
 #app.hidden{display:none;}
 
 /* Header */
-.app-header{background:var(--header);height:52px;display:flex;align-items:center;padding:0 16px 0 0;gap:0;flex-shrink:0;}
+.app-header{background:var(--header);height:52px;display:flex;align-items:center;padding:0 16px 0 0;gap:0;flex-shrink:0;overflow:hidden;}
 .hdr-logo{padding:0 20px;font-size:17px;font-weight:700;color:#fff;white-space:nowrap;border-right:1px solid rgba(255,255,255,.1);}
 .hdr-logo span{color:#60A5FA;}
 .hdr-session{padding:0 12px;font-size:13px;color:rgba(255,255,255,.6);}
 .hdr-session strong{color:#fff;}
-.hdr-search-wrap{flex:1;display:flex;align-items:center;padding:0 12px;}
+.hdr-search-wrap{flex:1;min-width:0;display:flex;align-items:center;padding:0 12px;}
 .hdr-search-box{display:flex;align-items:center;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);border-radius:20px;padding:0 12px;gap:6px;height:30px;width:200px;transition:width .25s,background .2s;}
 .hdr-search-box:focus-within{background:rgba(255,255,255,.18);border-color:rgba(255,255,255,.35);width:280px;}
 .hdr-search-icon{color:rgba(255,255,255,.5);font-size:13px;flex-shrink:0;cursor:pointer;}
@@ -395,7 +395,7 @@ html.is-mob,
 html.is-mob body{overflow-x:hidden;}
 
 /* Header */
-html.is-mob .app-header{height:auto;flex-wrap:wrap;padding:6px 10px 4px;gap:0;position:relative;z-index:500;}
+html.is-mob .app-header{height:auto!important;flex-wrap:wrap;padding:6px 10px 4px;gap:0;position:relative;z-index:500;overflow:visible;}
 html.is-mob .mob-menu-btn{display:block;}
 html.is-mob .hdr-logo{padding:4px 8px 4px 0;border-right:none;font-size:15px;flex-shrink:0;}
 html.is-mob .hdr-session{display:none;}
@@ -1441,7 +1441,7 @@ function showToast(msg){
 }
 
 // ── SIDEBAR TOGGLE ──────────────────────────────────────────────────────────
-const isMobile = () => document.documentElement.classList.contains('is-mob') || window.innerWidth <= 900;
+const isMobile = () => /iPhone|iPad|iPod|Android|Mobile/i.test(navigator.userAgent) || window.innerWidth < 900;
 let sidebarCollapsed = localStorage.getItem('sb_collapsed') === '1';
 
 function updateSidebarToggle(){
@@ -1453,13 +1453,17 @@ function updateSidebarToggle(){
 }
 
 function initSidebar(){
-  // Sidebar starts as collapsed in HTML — only un-collapse on desktop if user had it open
-  if(!isMobile() && !sidebarCollapsed){
-    document.getElementById('sidebar')?.classList.remove('collapsed');
+  if(isMobile()){
+    // Mobile: always keep collapsed, never auto-open
+    sidebarCollapsed = true;
+    document.getElementById('sidebar')?.classList.add('collapsed');
+    // Also apply is-mob class to html if UA detection in head missed it
+    document.documentElement.classList.add('is-mob');
+  } else {
+    // Desktop: restore user preference
+    document.getElementById('sidebar')?.classList.toggle('collapsed', sidebarCollapsed);
+    updateSidebarToggle();
   }
-  // On mobile: leave collapsed=true, keep the collapsed class
-  if(isMobile()) sidebarCollapsed = true;
-  if(!isMobile()) updateSidebarToggle();
 }
 
 function toggleSidebar(){
