@@ -13,7 +13,7 @@ import re
 import json
 from openai import AsyncOpenAI
 
-from prompts import SYSTEM_PROMPT
+from prompts import SYSTEM_PROMPT, SYSTEM_PROMPT_SHORT
 from tools import get_usmle_question, search_pubmed, TOPIC_KEYWORDS
 from validation import HALLUCINATION_MARKERS
 from db import (
@@ -91,12 +91,12 @@ def _trim_history(history: list, keep_last: int = 6) -> list:
 
 
 async def _fast_explanation(session_id: str, history: list, letter: str) -> str:
-    """1 Groq call — solo últimos 10 mensajes para evitar 413 TPM."""
+    """1 Groq call con prompt corto — evita 413 TPM."""
     resp = await client.chat.completions.create(
         model=MODEL,
         messages=[
-            {"role": "system", "content": SYSTEM_PROMPT.replace("{session_id}", session_id)},
-            *_trim_history(history),
+            {"role": "system", "content": SYSTEM_PROMPT_SHORT.replace("{session_id}", session_id)},
+            *_trim_history(history, keep_last=4),  # question + answer = 2 msgs mínimo
         ],
         max_tokens=MAX_TOKENS,
         temperature=0.2,
@@ -291,8 +291,8 @@ async def run_agent_stream(session_id: str, history: list[dict], user_message: s
             stream = await client.chat.completions.create(
                 model=MODEL,
                 messages=[
-                    {"role": "system", "content": SYSTEM_PROMPT.replace("{session_id}", session_id) + lang_note},
-                    *_trim_history(history),
+                    {"role": "system", "content": SYSTEM_PROMPT_SHORT.replace("{session_id}", session_id) + lang_note},
+                    *_trim_history(history, keep_last=4),
                 ],
                 stream=True, max_tokens=MAX_TOKENS, temperature=0.2,
             )
