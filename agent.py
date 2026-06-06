@@ -27,7 +27,7 @@ client = AsyncOpenAI(
 )
 
 MODEL      = os.getenv("LLM_MODEL", "llama-3.1-8b-instant")
-MAX_TOKENS = int(os.getenv("MAX_TOKENS", "1000"))
+MAX_TOKENS = int(os.getenv("MAX_TOKENS", "700"))
 
 # Last question per session — needed to save results after answering
 _session_last_question: dict[str, dict] = {}
@@ -85,7 +85,7 @@ async def _fast_question(session_id: str, history: list, topic: str | None, step
     return _format_question(q, display_topic, step_num)
 
 
-def _trim_history(history: list, keep_last: int = 10) -> list:
+def _trim_history(history: list, keep_last: int = 6) -> list:
     """Keep only the last N messages to stay within Groq TPM limits."""
     return history[-keep_last:] if len(history) > keep_last else history
 
@@ -182,7 +182,8 @@ TOOLS = [
 async def _tool_call_path(session_id: str, history: list, real_uid: str | None = None) -> str:
     """Tool use para plan/progress/search — hasta 4 iteraciones."""
     uid = real_uid or session_id
-    messages = list(history)
+    # Para tool calls solo necesitamos el último mensaje del usuario — el modelo busca datos frescos via tools
+    messages = _trim_history(history, keep_last=2)
     for _ in range(4):
         try:
             resp = await client.chat.completions.create(
